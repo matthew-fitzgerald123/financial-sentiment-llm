@@ -1,0 +1,22 @@
+model: mlx-community/Mistral-7B-Instruct-v0.3-4bit
+train: true
+data: ./data
+adapter_path: ./mistral-finetuned
+
+iters: 1000
+batch_size: 2              # halved to reduce memory pressure
+num_layers: 16
+learning_rate: 5e-5        # down from 2e-4 — 4-bit models need smaller LR to avoid NaN
+optimizer: adamw           # weight decay helps numerical stability vs plain adam
+grad_checkpoint: true      # gradient checkpointing — trades compute for ~30% less memory
+max_seq_length: 512        # our sequences are short; no need for 2048
+
+steps_per_report: 10
+steps_per_eval: 100
+val_batches: 10
+save_every: 250            # more frequent checkpoints so we can recover early
+
+lora_parameters:
+  rank: 8
+  dropout: 0.05
+  scale: 10.0              # was 20.0 — high scale + 4-bit quantization = NaN

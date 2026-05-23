@@ -1,0 +1,502 @@
+[
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"COPYRIGHT AFX News and AFX Financial News Logo are registered trademarks of AFX News Limited\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of this financial statement is neutral. It is a simple statement of fact, providing information about registered trademarks without expressing any positive or negative emotions. It does not indicate any financial performance, market trends, or business outlook, which are typically associated with sentiment analysis in financial statements.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.17543859649122806,
+    "base_rougeL": 0.17543859649122806,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Satama and Trainers ' House will remain as names and independent brands of the business areas .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given statement is neutral. This statement is simply informing that the brands \"Satama\" and \"Trainers ' House\" will continue to exist as separate entities within the business. It does not express any positive or negative emotions, nor does it provide any financial or performance-related information. Therefore, it is considered neutral.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.19354838709677416,
+    "base_rougeL": 0.16129032258064516,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Prices and delivery volumes of broadband products decreased significantly in 2005 .\"",
+    "ground_truth": "Sentiment: negative. This statement reflects unfavorable financial conditions.",
+    "base_model": "The sentiment of the statement \"Prices and delivery volumes of broadband products decreased significantly in 2005\" is generally negative. This is because a decrease in prices and delivery volumes is often associated with a decline in demand, competition, or profitability, which can negatively impact a company's financial performance. However, it's important to note that this is not always the case, as a decrease in prices could also be a strategic move to increase market share or attract more customers. Without additional context, it's difficult to definitively determine the full implications of this statement on the company's financial health.",
+    "finetuned": "\nSentiment: negative. This statement reflects unfavorable financial conditions. ",
+    "base_rouge1": 0.0909090909090909,
+    "base_rougeL": 0.0909090909090909,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"When open next year , it will be the largest facility in the world to produce diesel fuel from renewable feedstock such as palm oil and animal fat .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is predominantly positive. This is inferred from the use of superlative adjectives like \"largest\" and \"world,\" which suggest a significant achievement or advancement in the industry. The statement also highlights the use of renewable feedstock, which is generally viewed favorably due to its environmental benefits. The overall tone of the statement is optimistic and forward-looking, which further supports a positive sentiment.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.15584415584415584,
+    "base_rougeL": 0.12987012987012989,
+    "ft_rouge1": 0.75,
+    "ft_rougeL": 0.75
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"The tower 's engineers have created an 18 degree westward lean - four times the inclination on the Leaning Tower of Pisa - using diagrid structures that are aligned geometrically using Tekla Structures BIM ( Building Information Modeling ) software .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral to positive.\n\nThe statement primarily focuses on the technical achievement of the tower's engineers, specifically the creation of an 18-degree westward lean, which is four times the inclination of the Leaning Tower of Pisa. This technical feat is presented as an impressive accomplishment, which could potentially attract investors or stakeholders who value such engineering prowess.\n\nThe use of advanced technology like Tekla Structures BIM software adds to the positive sentiment, as it suggests the use of modern, efficient, and precise methods in construction. This could imply cost-",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.09433962264150944,
+    "base_rougeL": 0.056603773584905655,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"A purchase agreement for 7,200 tons of gasoline with delivery at the Hamina terminal , Finland , was signed with Neste Oil OYj at the average Platts index for this September plus eight US dollars per month .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. This statement is simply reporting a factual event, which is the signing of a purchase agreement for a certain quantity of gasoline from a specific supplier at a specified location and price. It does not express any positive or negative emotions or opinions. However, the sentiment could potentially be positive or negative depending on the context, such as whether the price is considered favorable or unfavorable compared to market conditions or the company's historical prices. But in the given statement, no such context is provided.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.13592233009708737,
+    "base_rougeL": 0.0970873786407767,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"In addition , the company will reduce a maximum of ten jobs .\"",
+    "ground_truth": "Sentiment: negative. This statement reflects unfavorable financial conditions.",
+    "base_model": "The sentiment of the given statement is neutral to slightly negative. The statement itself is factual and does not express any positive or negative emotion. However, the reduction of jobs, even if it's a small number, is generally perceived as negative because it implies a loss or change for the affected employees. Therefore, the sentiment is slightly negative due to the potential impact on the employees, but the statement itself is neutral in tone.",
+    "finetuned": "\nSentiment: negative. This statement reflects unfavorable financial conditions. ",
+    "base_rouge1": 0.07228915662650602,
+    "base_rougeL": 0.07228915662650602,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Changes to the as-built models from the design were communicated to the subcontractors to accommodate them into the steel and GRC fabrication process .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. This statement is factual and does not express any positive or negative emotions. It simply describes an action that was taken to communicate changes to the subcontractors regarding the as-built models and their integration into the steel and GRC fabrication process. There is no indication of approval, disapproval, excitement, or concern in the statement.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.1388888888888889,
+    "base_rougeL": 0.1111111111111111,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"The sale , comprising the margarine business in Finland and Poland , follows the approval of the Polish competition authorities earlier in October .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. This statement is purely informational, providing details about a business transaction without expressing any positive or negative emotions. It simply reports that a sale has taken place involving the margarine business in Finland and Poland, which was approved by the Polish competition authorities. There's no mention of the financial implications, market impact, or any other factors that could indicate a positive or negative sentiment.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.12195121951219512,
+    "base_rougeL": 0.12195121951219512,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Ponsse projects the forest machine markets to improve more than expected in 2010 from the previous year .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is positive. The reason for this classification is that the company, Ponsse, is projecting an improvement in the forest machine markets beyond what was previously expected for the year 2010. This implies a positive outlook for the company's performance and growth potential, as improved market conditions typically lead to increased sales and revenue.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.17391304347826086,
+    "base_rougeL": 0.11594202898550726,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"The financial details of the transaction were not disclosed .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the statement \"The financial details of the transaction were not disclosed\" is neutral or ambiguous. This is because the statement itself does not express a positive or negative emotion, but rather informs the reader that certain information (financial details) is not available. However, the lack of disclosure could potentially be seen as a negative sign, depending on the context and the expectations of transparency in the specific industry or situation. Without more context, it's difficult to definitively classify the sentiment as positive, negative, or neutral.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.12371134020618557,
+    "base_rougeL": 0.10309278350515465,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"In accordance with our strategy , we strengthened our local presence by establishing a representative office in South Africa in October .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is generally positive. The company's action of establishing a representative office in South Africa indicates an expansion of their local presence, which is often seen as a strategic move to grow the business and tap into new markets. This can be interpreted as a sign of confidence in the market and the company's future prospects. However, it's important to note that this statement does not provide specific financial information, so it doesn't necessarily indicate financial health or performance. Instead, it suggests a strategic direction and growth ambition.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.09433962264150944,
+    "base_rougeL": 0.09433962264150944,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"The handset maker did not disclose any financial details .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the statement \"The handset maker did not disclose any financial details\" is neutral-negative. The neutral aspect comes from the factual statement that no financial details were disclosed. However, the lack of disclosure can be perceived as negative because it prevents investors and analysts from making informed decisions about the company's financial health and performance. This lack of transparency can create uncertainty and potentially negatively impact the company's reputation.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.14634146341463414,
+    "base_rougeL": 0.0975609756097561,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"The Kyroskoski investment is to be completed in late 2011 and the +_+\u00c6nekoski investment in the spring of 2012 .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of this financial statement is neutral. The statement provides factual information about the timeline of two investments without expressing any positive or negative emotions. It does not indicate whether the investments are expected to be profitable or unprofitable, successful or unsuccessful, or beneficial or detrimental to the company. Therefore, it is neutral in terms of sentiment.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.18181818181818182,
+    "base_rougeL": 0.1212121212121212,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"The Group 's order portfolio decreased from EUR 42.9 mn in 9-2007 to EUR 33.3 mn in 2-2008 .\"",
+    "ground_truth": "Sentiment: negative. This statement reflects unfavorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral to slightly negative.\n\nThe statement indicates a decrease in the order portfolio from EUR 42.9 million in the 9-2007 period to EUR 33.3 million in the 2-2008 period. A decrease in the order portfolio could be interpreted as a negative sign, as it suggests a potential decrease in future revenue, as orders are a key indicator of future business activity. However, without additional context, it is difficult to definitively classify the sentiment as negative. The statement is neutral because it simply presents the facts without",
+    "finetuned": "\nSentiment: negative. This statement reflects unfavorable financial conditions. ",
+    "base_rouge1": 0.07547169811320753,
+    "base_rougeL": 0.056603773584905655,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"The most interesting export markets will be Russia , the Baltic countries and Scandinavia .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the statement \"The most interesting export markets will be Russia, the Baltic countries and Scandinavia\" is generally positive. The use of the word \"interesting\" implies that the speaker sees potential or opportunity in these markets, which is a positive sentiment. Additionally, the mention of multiple countries suggests a broad and diverse market, which is often seen as a positive aspect in business. However, it's important to note that the sentiment could be influenced by the specific context in which the statement is made, such as the speaker's industry, previous experiences, and the current economic climate. For example, if the",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.03571428571428572,
+    "base_rougeL": 0.03571428571428572,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"`` The acquisition of Sampo Bank makes strategic sense for DB , '' says Lindsey Liddell , director of Fitch Ratings 's Financial Institutions Group .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment expressed in the statement is generally neutral or positive. The use of the phrase \"The acquisition of Sampo Bank makes strategic sense for DB\" suggests that the acquisition is seen as a strategic move, which is typically a positive indication. However, the statement does not explicitly convey strong positive or negative emotions, making it neutral. The inclusion of Lindsey Liddell's quote from Fitch Ratings' Financial Institutions Group adds credibility to the statement, but does not significantly alter the overall sentiment.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.0879120879120879,
+    "base_rougeL": 0.0879120879120879,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"HELSINKI AFX - Cargotec said it has bought a 95 pct stake in Indital Construction Machinery Ltd , a Bangalore-based company that makes fork lift trucks and mobile cranes , for an undisclosed sum .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of this financial statement is neutral. The statement is factual and provides information about a company's acquisition without expressing any positive or negative emotions. It does not provide any context about the financial implications, potential benefits, or challenges associated with the acquisition, which would help to determine a more specific sentiment. However, the acquisition itself could be seen as a positive development for Cargotec, indicating growth or expansion, but without further context, it is difficult to definitively classify the sentiment as positive or negative.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.10526315789473682,
+    "base_rougeL": 0.10526315789473682,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"The company has 120 employees and annual sales of approximately EUR16m .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. It provides factual information about the company's size (number of employees) and revenue (annual sales), but it does not express any positive or negative emotions or opinions. The statement is simply stating the facts without any emotional or subjective language.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.13793103448275865,
+    "base_rougeL": 0.10344827586206896,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Metso said it has won an order worth around 40 mln eur to supply a kraftliner board machine to China 's Lee & Man Paper Co. .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of this financial statement is generally positive. The statement indicates that Metso has secured a significant order, worth approximately 40 million euros, from a reputable company like Lee & Man Paper Co. in China. This suggests that Metso's products or services are in demand, which could be seen as a positive sign for the company's financial health and market position. Furthermore, the deal involves a kraftliner board machine, which is a key product in the paper industry, adding to the positive connotation. However, it's important to note that while this is a positive development, it's",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.09259259259259259,
+    "base_rougeL": 0.07407407407407407,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"It delivers a different user experience and enables us to widen the market we can address . ''\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral to positive.\n\nThe statement highlights the company's ability to offer a different user experience and expand its market reach. This can be seen as a positive development, as it suggests growth and potential for increased revenue. However, the statement does not explicitly express any negative or positive emotions, making it neutral overall. The lack of specific financial or performance metrics prevents a definitive classification as either positive or negative.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.1149425287356322,
+    "base_rougeL": 0.1149425287356322,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"HUHTAMAKI OYJ STOCK EXCHANGE RELEASE , 16.9.2008 AT 13.32 Huhtamaki 's Capital Markets Day for institutional investors and analysts is held in Espoo , September 16 , 2008 starting at 13.30 pm Finnish time .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. It is a factual announcement about an event (Capital Markets Day) organized by Huhtamaki Oyj for institutional investors and analysts, providing details such as the date, time, and location of the event. There is no explicit positive or negative sentiment expressed in the text.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.13114754098360656,
+    "base_rougeL": 0.09836065573770493,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Ixonos estimates that it will hire 20 specialists in mechanical engineering , electronics design , and R&D for its new unit in Jyvaeskylae by the end of 2009 .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is generally neutral or positive.\n\nThe reason for this classification is that the statement provides information about the company's growth plans, specifically the hiring of 20 specialists in various fields. This indicates that the company is investing in its future, which is a positive sign. However, the statement does not provide any information about the company's current financial status or performance, so it does not convey any negative sentiments. Therefore, it can be classified as neutral or positive.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.10526315789473682,
+    "base_rougeL": 0.10526315789473682,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Alma Media 's net sales in 2009 totalled MEUR 307.8 with an operating margin of 13.5 per cent .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of this financial statement is generally neutral or positive.\n\nThe statement provides factual information about Alma Media's net sales and operating margin for the year 2009. The net sales of MEUR 307.8 and an operating margin of 13.5% are both significant figures, indicating a stable and potentially successful business operation. However, without additional context about the industry average, the company's performance in previous years, or any challenges or opportunities mentioned, it is difficult to definitively classify the sentiment as either positive or negative.\n\nIn summary, the statement presents a",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.0970873786407767,
+    "base_rougeL": 0.07766990291262135,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"The iPad application joins the iPhone app as part of Monster 's range of mobile applications for job hunting .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral or positive. The statement is informative, indicating an expansion of Monster's mobile application offerings, which could be perceived as a positive move for the company. However, it does not provide any specific information about the financial implications or user reception of the new iPad application, which would be necessary to classify the sentiment as definitively positive or negative.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.10526315789473684,
+    "base_rougeL": 0.10526315789473684,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"No service pricing details were disclosed .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the statement \"No service pricing details were disclosed\" is neutral, but it leans slightly negative. The reason for this is that the lack of pricing information can create uncertainty and potential dissatisfaction for customers who are unable to make informed decisions about the service. However, it's important to note that the statement itself does not explicitly express a positive or negative emotion. The sentiment could change based on the context, such as if the service is known to be expensive, then the lack of pricing information might be more concerning. Conversely, if the service is known to be affordable, the lack of pricing information might",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.06837606837606838,
+    "base_rougeL": 0.06837606837606838,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Profit for the period increased from EUR 2.9 mn to EUR 10.5 mn .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is positive. This is inferred from the increase in profit from EUR 2.9 million to EUR 10.5 million, which indicates a significant improvement in the company's financial performance. The increase in profit suggests that the company's operations are more successful or efficient compared to the previous period, leading to a more favorable financial outlook.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.16438356164383564,
+    "base_rougeL": 0.13698630136986303,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"( ADP News ) - Nov 28 , 2008 - Finnish power-supply solutions provider Efore Oyj ( OMX : EFO1V ) announced today the launch of OPUS DC , the latest power system in its OPUS product line .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. The statement is factual and informative, providing details about a company (Efore Oyj) launching a new product (OPUS DC). It does not express any positive or negative emotions or opinions about the company, its performance, or the product. Instead, it simply reports the event.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.13114754098360656,
+    "base_rougeL": 0.06557377049180328,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"One of my colleagues summed up the E7 quite aptly when he remarked : `` Fantastic hardware .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment expressed in the statement is positive. The use of the word \"Fantastic\" indicates a high level of satisfaction or admiration, and the term \"hardware\" in this context typically refers to physical equipment or devices, often associated with technology or manufacturing industries. Therefore, the statement suggests that the technology or equipment in question is of high quality or performs exceptionally well, which is generally considered a positive sentiment.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.10389610389610389,
+    "base_rougeL": 0.10389610389610389,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Kesko Agro Eesti , the retailer and wholesaler of grain , agricultural and warehousing machinery and accessories , had net sales of 81 million euros in 2007 , an increase by one-tenth over the preceding year .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is generally positive. This is inferred from the increase in net sales by one-tenth over the preceding year, which indicates growth and financial improvement for Kesko Agro Eesti. However, it's important to note that this statement does not provide a comprehensive view of the company's financial health, as it only mentions one aspect (net sales). To get a more accurate sentiment, one would need to analyze other financial indicators such as profit margins, expenses, and cash flow.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.10526315789473682,
+    "base_rougeL": 0.10526315789473682,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Sponda is a property investment company , specialising in commercial properties in the largest cities in Finland and Russia .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. This statement provides factual information about the company (Sponda) and its area of specialization (commercial properties in Finland and Russia). It does not express any positive or negative emotions, making it neutral in sentiment. However, it's important to note that a neutral statement can still be valuable for understanding the company's business focus and strategy.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.16216216216216214,
+    "base_rougeL": 0.13513513513513511,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"With the measures , Suominen Corporation aims to ensure the competitiveness of the Flexible Packaging business in the long term .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is generally neutral to positive.\n\nThe statement indicates that Suominen Corporation is taking active measures to maintain the competitiveness of its Flexible Packaging business in the long term. This shows a proactive approach and commitment to the business, which can be perceived as positive. However, the statement does not contain any explicit positive or negative emotions, making it neutral overall.\n\nThe absence of any negative words or phrases, such as \"struggling,\" \"declining,\" or \"losses,\" contributes to the neutral tone. Additionally, the statement does not contain any overt",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.09803921568627451,
+    "base_rougeL": 0.0784313725490196,
+    "ft_rouge1": 0.75,
+    "ft_rougeL": 0.75
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Solvay S.A. has engaged Poyry to provide project management , engineering , procurement , and site services for a hydrogen peroxide production plant to be built by a Solvay-BASF joint venture at BASF 's Zandvliet site , Belgium .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. This statement is simply reporting a business decision or action, without expressing any positive or negative emotions. It informs the reader that Solvay S.A. has hired Poyry for project management and related services for a joint venture with BASF, to build a hydrogen peroxide production plant at BASF's Zandvliet site in Belgium. There is no mention of the potential success or failure of the project, or any positive or negative opinions about the parties involved.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.10638297872340426,
+    "base_rougeL": 0.0851063829787234,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"An earn-out payment of up to 4.0 mln euro ( $ 5.3 mln ) can also be paid depending on Intellibis financial performance in 2007 .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of this financial statement is neutral, as it provides factual information about a potential future payment without expressing any positive or negative emotions. The statement simply states that an earn-out payment of up to a certain amount could be made based on Intellibis' financial performance in 2007, without indicating whether the speaker expects this to happen or not. The tone is informative rather than optimistic or pessimistic.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.1282051282051282,
+    "base_rougeL": 0.1282051282051282,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"The EPS outlook was increased by 5.6 pct for 2007 and 7.0 pct for 2008 .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is generally positive. The statement indicates an increase in the Earnings Per Share (EPS) outlook for both 2007 and 2008. A higher EPS is often seen as a positive sign because it suggests that the company is making more profit per share, which can lead to increased investor confidence. The specific percentage increases mentioned (5.6% for 2007 and 7.0% for 2008) are also relatively significant, further supporting a positive sentiment. However, it's important to note that this is just",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.10309278350515465,
+    "base_rougeL": 0.061855670103092786,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Metsaliitto will sell 1.1 million B shares of Neomarkka , accounting for about 18.3 pct of Neomarkka 's equity and about 12.7 pct of the voting rights .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of this financial statement is neutral, as it provides factual information about a company (Metsaliitto) selling a significant portion of its shares in another company (Neomarkka). However, the neutral sentiment does not necessarily imply a positive or negative outlook.\n\nThe statement does not provide any context or analysis about the reasons behind the sale, the financial implications for either company, or the potential impact on the market. Without this information, it is difficult to determine whether the sale is a positive or negative event for either company or the market.\n\nIn general, the sale of a significant portion of shares",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.10909090909090909,
+    "base_rougeL": 0.0909090909090909,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Ragutis , which is based in Lithuania 's second-largest city Kaunas , boosted its sales last year 22.3 per cent to 36.4 million liters .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is generally positive. The increase in sales by 22.3% to 36.4 million liters indicates a significant growth in the company's performance, which is typically viewed as a positive sign. This growth suggests that the company's products or services are in demand, and the company is successfully executing its business strategy. However, it's important to note that this statement does not provide information about the company's profitability or other financial metrics, so a more comprehensive analysis would be needed to make a definitive judgment about the company's overall health.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.0909090909090909,
+    "base_rougeL": 0.0909090909090909,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Cost savings will then rise to some 20 mln eur a year from 2007 , OKO said .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is generally positive. The statement indicates that the company, OKO, expects to achieve significant cost savings, specifically 20 million euros annually, starting from 2007. This suggests that the company is aiming for financial improvement, which is often perceived as a positive sign by investors and stakeholders. However, it's important to note that this is a single statement and doesn't provide the full context of the company's financial health or future prospects. For a comprehensive analysis, one would need to consider other financial indicators and future plans of the company.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.09345794392523366,
+    "base_rougeL": 0.09345794392523366,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"According to the company , the lay-offs will be temporary .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral to slightly positive. The reason for this classification is that while the news of lay-offs can be seen as negative, the fact that they are described as temporary suggests that the company is taking a measured approach to address a short-term issue, which may indicate a level of optimism about the company's future. However, it's important to note that the sentiment can change based on additional context or information about the company and the reasons for the lay-offs.",
+    "finetuned": "\nSentiment: negative. This statement reflects unfavorable financial conditions. ",
+    "base_rouge1": 0.09999999999999999,
+    "base_rougeL": 0.06,
+    "ft_rouge1": 0.75,
+    "ft_rougeL": 0.75
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"The purchase price will be paid in cash upon the closure of the transaction , scheduled for April 1 , 2009 .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. This statement is simply providing factual information about the terms of a transaction, without expressing any positive or negative emotions. It does not indicate whether the speaker or writer views the transaction as a good or bad thing, or whether they are optimistic or pessimistic about its outcome. Instead, it is a straightforward statement about the payment terms of the transaction.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.1282051282051282,
+    "base_rougeL": 0.10256410256410256,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"In November , the Finnish government decreased its ownership in the company further to 31.1 percent from 38 percent .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. The statement is factual and provides information about a decrease in the Finnish government's ownership in a company. It does not express any positive or negative emotions or opinions about the situation. However, a decrease in government ownership could potentially be seen as a positive sign for the company's independence and potential growth, but without additional context, it is difficult to definitively classify the sentiment as positive or negative.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.09090909090909091,
+    "base_rougeL": 0.06818181818181818,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Finnish holding company Panostaja Oyj said on June 12 , 2007 it has signed a letter of intent to acquire local Lahden Lampokasittely Oy and Heatmasters Oy , active in the heat treatment of metals , for a total 3.1 mln euro ( $ 4.1 mln ) .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of this financial statement is neutral. It is a factual statement about a company, Panostaja Oyj, announcing its intention to acquire two other companies, Lahden Lampokasittely Oy and Heatmasters Oy, for a total of 3.1 million euros. There is no explicit positive or negative emotion expressed in the statement. However, the acquisition could potentially be seen as a positive move for Panostaja Oyj, indicating growth or expansion, but without more context, it is difficult to definitively classify the sentiment as positive.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.10869565217391304,
+    "base_rougeL": 0.08695652173913042,
+    "ft_rouge1": 0.75,
+    "ft_rougeL": 0.75
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Member of the HK Ruokatalo Group in Finland , Scan , is launching a joint venture slaughterhouse with Team Ugglarp in Sk+_ne , southern Sweden .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. It is a factual statement about a business collaboration between two entities, HK Ruokatalo Group's member Scan, and Team Ugglarp, in Sweden. There is no positive or negative emotional tone in the statement, as it does not express any opinions, evaluations, or feelings about the joint venture. Instead, it simply reports the fact that the joint venture is being launched.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.10256410256410256,
+    "base_rougeL": 0.07692307692307691,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"In July-September 2009 , Konecranes ' sales decreased to EUR 368.7 mn from EUR 520.4 mn in July-September 2008 .\"",
+    "ground_truth": "Sentiment: negative. This statement reflects unfavorable financial conditions.",
+    "base_model": "The sentiment of this financial statement is negative. The decrease in sales from EUR 520.4 million in Q3 2008 to EUR 368.7 million in Q3 2009 indicates a decline in the company's financial performance, which is typically associated with a negative sentiment. This could be due to various factors such as economic downturn, market conditions, or operational issues. However, without additional context, it's not possible to determine the exact cause of this decline.",
+    "finetuned": "\nSentiment: negative. This statement reflects unfavorable financial conditions. ",
+    "base_rouge1": 0.1411764705882353,
+    "base_rougeL": 0.11764705882352941,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"However , the total orders received will still be above last year s levels .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is generally neutral or slightly positive. The statement indicates that the total orders received will be above the levels of the previous year, which is a positive sign for the company's growth and performance. However, the use of \"however\" at the beginning of the sentence might suggest some reservations or challenges that the company is facing, which is why the sentiment is not overwhelmingly positive. Overall, the statement shows that the company is maintaining or improving its performance compared to the previous year, which is a positive development.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.07692307692307693,
+    "base_rougeL": 0.057692307692307696,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"The upgrade is intended to raise the network capacity from 450 MHz to 630 MHz in several cities , enabling bi-directional services for digital television as well as broadband data .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. This statement is primarily informative, providing details about an upgrade to a network's capacity, without expressing any positive or negative emotions. However, the potential benefits of the upgrade, such as enabling bi-directional services for digital television and broadband data, could be perceived as positive by stakeholders, but the statement itself does not convey this sentiment explicitly.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.13333333333333333,
+    "base_rougeL": 0.08,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"Raisio 's bid to buy Glisten is a `` win-win '' deal for both companies , the chairman of the UK snacks firm told just-food today 10 February .\"",
+    "ground_truth": "Sentiment: positive. This statement reflects favorable financial conditions.",
+    "base_model": "The sentiment expressed in this statement is generally positive or neutral, leaning slightly towards positive. The use of the phrase \"win-win\" suggests that both companies involved in the merger or acquisition (Raisio and Glisten) are expected to benefit from the deal. However, it's important to note that the statement does not provide specific details about the expected benefits, so the exact level of positivity cannot be definitively determined. The chairman's statement is optimistic about the potential outcome of the deal, which is why the sentiment is classified as positive or neutral leaning positive.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.07692307692307693,
+    "base_rougeL": 0.057692307692307696,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"`` Rapala is excited to be partnering with RBFF and other industry leaders on this holiday promotion . ''\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the statement is positive. The word \"excited\" indicates a positive emotion or anticipation, suggesting that Rapala is looking forward to the partnership and the holiday promotion. The use of \"partnering\" and \"industry leaders\" also implies a collaborative effort with reputable entities, which is generally viewed as a positive development. Overall, the statement suggests a positive outlook and optimism about the partnership and the holiday promotion.",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.05263157894736842,
+    "base_rougeL": 0.05263157894736842,
+    "ft_rouge1": 0.75,
+    "ft_rougeL": 0.75
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"These savings will have full impact as of the beginning of 2007 .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the statement \"These savings will have full impact as of the beginning of 2007\" is generally positive. This is because the savings mentioned are expected to have a significant or full impact in the future, which suggests that the financial situation is expected to improve. However, it's important to note that this is a rather neutral statement as it doesn't provide any context about the current financial status or the magnitude of the savings. A more positive statement might include phrases like \"significant cost reductions\" or \"substantial savings,\" while a negative statement might indicate that the savings are not expected to",
+    "finetuned": "\nSentiment: positive. This statement reflects favorable financial conditions. ",
+    "base_rouge1": 0.08771929824561404,
+    "base_rougeL": 0.07017543859649122,
+    "ft_rouge1": 0.75,
+    "ft_rougeL": 0.75
+  },
+  {
+    "question": "Classify the sentiment of the following financial statement and briefly explain your reasoning:\n\n\"One of the largest projects of the magazine division of SanomaWSOY - Sanoma Magazines International in 2006 became launch of the Russian magazine Gloriya .\"",
+    "ground_truth": "Sentiment: neutral. This statement reflects neutral financial conditions.",
+    "base_model": "The sentiment of the given financial statement is neutral. The statement is factual and informative, providing details about a project launch without expressing any positive or negative emotions. It simply states that a new magazine, Gloriya, was launched by Sanoma Magazines International in 2006, which is a part of the magazine division of SanomaWSOY. There is no mention of the success or failure of the project, financial performance, or any other factors that could indicate a positive or negative sentiment.",
+    "finetuned": "\nSentiment: neutral. This statement reflects neutral financial conditions. ",
+    "base_rouge1": 0.09090909090909091,
+    "base_rougeL": 0.09090909090909091,
+    "ft_rouge1": 1.0,
+    "ft_rougeL": 1.0
+  }
+]

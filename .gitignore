@@ -1,0 +1,11 @@
+mistral-finetuned/
+data/financial_sentiment/
+__pycache__/
+*.pyc
+.env
+mlruns/
+*.gguf
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
