@@ -110,5 +110,5 @@ Full per-example results in `eval/results.json` after running `make eval`.
 
 - **Richer output**: add explanation of *why* the sentiment is positive/negative, not just the label
 - **Harder eval**: run on out-of-domain financial news (earnings calls, 10-K filings) to test generalization
-- **Quantize the adapter**: merge LoRA weights and re-quantize for faster inference
-- **Streaming**: add SSE streaming to the FastAPI endpoint for real-time token output
+- **Merge + requantize**: merge the LoRA adapter into the base weights and re-quantize to reduce inference overhead
+- **GPU serving**: right-size the ECS task for a GPU instance (g4dn.xlarge) and switch to vLLM for production throughput

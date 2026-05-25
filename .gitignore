@@ -1,10 +1,14 @@
 mistral-finetuned/
 data/financial_sentiment/
+data/train.jsonl
+data/valid.jsonl
 __pycache__/
 *.pyc
+*.pyo
 .env
 mlruns/
 *.gguf
 .terraform/
 *.tfstate
 *.tfstate.backup
+benchmarks/bench_results.json
