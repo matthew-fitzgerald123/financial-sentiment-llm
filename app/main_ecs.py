@@ -24,10 +24,20 @@ pipeline = None
 executor = ThreadPoolExecutor(max_workers=1)
 
 
+MOCK_MODE = os.getenv("MOCK_MODE", "false").lower() == "true"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global pipeline
-    from transformers import AutoTokenizer, AutoModelForCausalLM, TextIteratorStreamer
+    if MOCK_MODE:
+        # Stub for infra validation / CI — no weights downloaded
+        pipeline = {"model": None, "tokenizer": None}
+        print("MOCK_MODE enabled — skipping model load")
+        yield
+        return
+
+    from transformers import AutoTokenizer, AutoModelForCausalLM
     import torch
     from peft import PeftModel
 
