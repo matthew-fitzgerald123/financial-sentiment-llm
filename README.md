@@ -11,6 +11,39 @@ Fine-tuned Mistral-7B for financial sentiment classification using QLoRA on Appl
 
 The base model can classify sentiment but generates it in its own verbose, inconsistent format. The fine-tuned model reliably produces structured output (`Sentiment: {label}. This statement reflects...`) that matches the target format with near-perfect fidelity.
 
+## Architecture
+
+```mermaid
+flowchart TD
+    subgraph Train["Training (Apple Silicon)"]
+        DS[(HuggingFace\nDataset)] --> DP[data/prepare.py]
+        DP --> JSONL[train.jsonl\nvalid.jsonl]
+        JSONL --> LT[mlx-lm LoRA\n1000 iters]
+        LT --> ADPT[LoRA Adapter\n40 MB]
+        LT --> MLF[MLflow\nExperiment]
+    end
+
+    subgraph Eval["CI / Eval (GitHub Actions macos-14)"]
+        ADPT --> EV[eval/eval.py\nROUGE-L gate ≥ 0.85]
+        EV --> AR[Artifact:\nresults.json]
+    end
+
+    subgraph Serve["Serving"]
+        ADPT --> LC[Local: app/main.py\nmlx-lm + SSE]
+        ADPT --> DC[Docker: app/main_ecs.py\ntransformers + PEFT]
+    end
+
+    subgraph AWS["AWS (Terraform)"]
+        ECR[ECR Repository] --> ECS[ECS Fargate\n2 vCPU / 8 GB]
+        ALB[Application\nLoad Balancer] --> ECS
+        CW[CloudWatch\nLogs] --> ECS
+    end
+
+    DC --> ECR
+    Client([Client]) -->|HTTP /predict\n/predict/stream| ALB
+    Client -->|local dev| LC
+```
+
 ## Stack
 
 - **Model**: `mlx-community/Mistral-7B-Instruct-v0.3-4bit`
@@ -18,6 +51,7 @@ The base model can classify sentiment but generates it in its own verbose, incon
 - **Dataset**: [nickmuchi/financial-classification](https://huggingface.co/datasets/nickmuchi/financial-classification) (4,551 train / 506 test)
 - **Tracking**: MLflow
 - **Serving**: FastAPI + uvicorn
+- **Infra**: Docker · AWS ECS Fargate · Terraform · GitHub Actions
 
 ## Model Card
 
