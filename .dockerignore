@@ -1,0 +1,11 @@
+.git
+.claude
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+mlruns/
+train/
+eval/
+data/
+*.log

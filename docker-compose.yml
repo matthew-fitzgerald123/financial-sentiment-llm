@@ -1,0 +1,17 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      BASE_MODEL_ID: mlx-community/Mistral-7B-Instruct-v0.3-4bit
+      ADAPTER_PATH: ./mistral-finetuned
+      MODEL_VERSION: mistral-7b-finance-mlx-lora-v1
+    volumes:
+      - ./mistral-finetuned:/app/mistral-finetuned:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
