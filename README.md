@@ -1,6 +1,10 @@
 # Financial Sentiment LLM
 
-Fine-tuned Mistral-7B for financial sentiment classification using QLoRA on Apple Silicon. Served via a local FastAPI endpoint. Trained and evaluated in a weekend.
+[![Eval](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/eval.yml/badge.svg)](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/eval.yml)
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![Platform](https://img.shields.io/badge/platform-Apple%20Silicon-black)
+
+Fine-tuned Mistral-7B for financial sentiment classification using LoRA on Apple Silicon. Exposes a FastAPI service with both batch and SSE streaming inference, containerised with Docker, deployed to AWS ECS via Terraform, and gated by a CI eval pipeline on every push.
 
 ## Results
 
@@ -87,6 +91,7 @@ make serve
 
 ## Inference
 
+**Batch:**
 ```bash
 curl -X POST http://localhost:8080/predict \
   -H "Content-Type: application/json" \
@@ -98,6 +103,22 @@ curl -X POST http://localhost:8080/predict \
   "answer": "Sentiment: positive. This statement reflects favorable financial conditions.",
   "model_version": "mistral-7b-finance-mlx-lora-v1"
 }
+```
+
+**Streaming (SSE):**
+```bash
+curl -X POST http://localhost:8080/predict/stream \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Classify the sentiment: \"Revenue declined 8% amid restructuring charges.\""}' \
+  --no-buffer
+```
+
+```
+data: {"token": "Sentiment", "model_version": "mistral-7b-finance-mlx-lora-v1"}
+data: {"token": ":", "model_version": "mistral-7b-finance-mlx-lora-v1"}
+data: {"token": " negative", "model_version": "mistral-7b-finance-mlx-lora-v1"}
+...
+data: [DONE]
 ```
 
 ## Eval Details

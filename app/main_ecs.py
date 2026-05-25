@@ -31,9 +31,9 @@ MOCK_MODE = os.getenv("MOCK_MODE", "false").lower() == "true"
 async def lifespan(app: FastAPI):
     global pipeline
     if MOCK_MODE:
-        # Stub for infra validation / CI — no weights downloaded
+        # Stub for infra validation / CI, no weights downloaded
         pipeline = {"model": None, "tokenizer": None}
-        print("MOCK_MODE enabled — skipping model load")
+        print("MOCK_MODE enabled, skipping model load")
         yield
         return
 
@@ -53,7 +53,7 @@ async def lifespan(app: FastAPI):
         base = PeftModel.from_pretrained(base, ADAPTER_PATH)
         print(f"Loaded adapter from {ADAPTER_PATH!r}")
     else:
-        print(f"No adapter at {ADAPTER_PATH!r} — using base model")
+        print(f"No adapter at {ADAPTER_PATH!r}, using base model")
 
     pipeline = {"model": base, "tokenizer": tokenizer}
     yield

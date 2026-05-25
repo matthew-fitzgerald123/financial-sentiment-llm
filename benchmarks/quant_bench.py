@@ -137,7 +137,7 @@ def main():
     print(f"\n{'Configuration':<30} {'Scale':>8} {'Tok/s':>8} {'ROUGE-L':>8}")
     print("-" * 58)
     for r in results:
-        scale_str = f"{r['scale']:.1f}" if r["scale"] is not None else "—"
+        scale_str = f"{r['scale']:.1f}" if r["scale"] is not None else "-"
         print(f"{r['config']:<30} {scale_str:>8} {r['tps_median']:>8.1f} {r['rougeL_mean']:>8.3f}")
 
     print(f"\nFull results → {RESULTS_PATH}")

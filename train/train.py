@@ -22,7 +22,7 @@ def set_memory_limit():
         mx.metal.set_memory_limit(limit)
         print(f"Metal memory limit: {MEMORY_LIMIT_GB}GB")
     except AttributeError:
-        print("Note: mx.metal.set_memory_limit not available in this mlx version — skipping")
+        print("Note: mx.metal.set_memory_limit not available in this mlx version, skipping")
 
 
 def main():

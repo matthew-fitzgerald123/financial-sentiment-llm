@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
     global model, tokenizer
     adapter = ADAPTER_PATH if Path(ADAPTER_PATH).exists() else None
     if adapter is None:
-        print(f"No adapter found at {ADAPTER_PATH!r} — loading base model only")
+        print(f"No adapter found at {ADAPTER_PATH!r}, loading base model only")
     model, tokenizer = load(MODEL_ID, adapter_path=adapter)
     yield
 
@@ -73,7 +73,7 @@ async def predict(query: Query):
 
 @app.post("/predict/stream")
 async def predict_stream(query: Query):
-    """SSE endpoint — streams tokens as they are generated."""
+    """SSE endpoint: streams tokens as they are generated."""
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
