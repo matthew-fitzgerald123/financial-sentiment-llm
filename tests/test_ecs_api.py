@@ -52,6 +52,17 @@ def test_health(client):
     data = r.json()
     assert data["status"] == "ok"
     assert data["model_loaded"] is True
+    assert "model_version" in data
+
+
+def test_model_info(client):
+    r = client.get("/model/info")
+    assert r.status_code == 200
+    data = r.json()
+    assert "model_id" in data
+    assert "adapter_path" in data
+    assert "model_version" in data
+    assert data["model_loaded"] is True
 
 
 def test_predict_returns_answer(client):
