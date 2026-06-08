@@ -85,6 +85,9 @@ make train
 # Evaluate base vs fine-tuned
 make eval
 
+# Run test suite (no model weights required)
+make test
+
 # Serve locally at http://localhost:8080
 make serve
 ```
