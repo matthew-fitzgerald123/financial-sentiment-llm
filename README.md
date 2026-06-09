@@ -76,6 +76,7 @@ flowchart TD
 ```bash
 # Install deps
 make install
+pip install -r requirements-dev.txt   # test dependencies (pytest, httpx)
 
 # Prepare dataset (downloads ~500KB)
 make prepare
