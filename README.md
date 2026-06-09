@@ -119,6 +119,7 @@ curl -X POST http://localhost:8080/predict \
 ```json
 {
   "answer": "Sentiment: positive. This statement reflects favorable financial conditions.",
+  "label": "positive",
   "model_version": "mistral-7b-finance-mlx-lora-v1"
 }
 ```

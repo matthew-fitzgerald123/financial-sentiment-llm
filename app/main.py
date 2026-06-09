@@ -14,6 +14,8 @@ from mlx_lm import generate as mlx_generate
 from mlx_lm import stream_generate
 from pydantic import BaseModel, ConfigDict
 
+from app.utils import parse_sentiment_label
+
 MODEL_ID = os.getenv("BASE_MODEL_ID", "mlx-community/Mistral-7B-Instruct-v0.3-4bit")
 ADAPTER_PATH = os.getenv("ADAPTER_PATH", "./mistral-finetuned")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "mistral-7b-finance-mlx-lora-v1")
@@ -44,6 +46,7 @@ class Query(BaseModel):
 class Response(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
     answer: str
+    label: str
     model_version: str
 
 
@@ -68,7 +71,7 @@ async def predict(query: Query):
 
     loop = asyncio.get_event_loop()
     answer = await loop.run_in_executor(executor, _generate, query.question, query.max_tokens)
-    return Response(answer=answer, model_version=MODEL_VERSION)
+    return Response(answer=answer, label=parse_sentiment_label(answer), model_version=MODEL_VERSION)
 
 
 @app.post("/predict/stream")
