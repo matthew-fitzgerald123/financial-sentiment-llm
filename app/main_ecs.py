@@ -133,6 +133,16 @@ async def predict_stream(query: Query):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
+@app.get("/model/info")
+async def model_info():
+    return {
+        "model_id":      BASE_MODEL_ID,
+        "adapter_path":  ADAPTER_PATH,
+        "model_version": MODEL_VERSION,
+        "model_loaded":  pipeline is not None,
+    }
+
+
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model_loaded": pipeline is not None}
+    return {"status": "ok", "model_loaded": pipeline is not None, "model_version": MODEL_VERSION}

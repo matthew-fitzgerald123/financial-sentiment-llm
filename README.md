@@ -1,6 +1,7 @@
 # Financial Sentiment LLM
 
 [![Eval](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/eval.yml/badge.svg)](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/eval.yml)
+[![Tests](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/test.yml/badge.svg)](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/test.yml)
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![Platform](https://img.shields.io/badge/platform-Apple%20Silicon-black)
 
@@ -90,6 +91,20 @@ make serve
 ```
 
 ## Inference
+
+**Model info:**
+```bash
+curl http://localhost:8080/model/info
+```
+
+```json
+{
+  "model_id": "mistralai/Mistral-7B-Instruct-v0.3",
+  "adapter_path": "./mistral-finetuned",
+  "model_version": "mistral-7b-finance-mlx-lora-v1",
+  "model_loaded": true
+}
+```
 
 **Batch:**
 ```bash
