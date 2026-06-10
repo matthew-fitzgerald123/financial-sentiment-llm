@@ -9,12 +9,12 @@ Fine-tuned Mistral-7B for financial sentiment classification using LoRA on Apple
 
 ## Results
 
-| Model | ROUGE-1 | ROUGE-L |
-|---|---|---|
-| Base Mistral-7B-Instruct-v0.3 | 0.113 | 0.094 |
-| Fine-tuned (LoRA) | 0.970 | 0.970 |
+| Model | ROUGE-1 | ROUGE-L | Label Acc |
+|---|---|---|---|
+| Base Mistral-7B-Instruct-v0.3 | 0.113 | 0.094 | — |
+| Fine-tuned (LoRA) | 0.970 | 0.970 | — |
 
-The base model can classify sentiment but generates it in its own verbose, inconsistent format. The fine-tuned model reliably produces structured output (`Sentiment: {label}. This statement reflects...`) that matches the target format with near-perfect fidelity.
+The base model can classify sentiment but generates it in its own verbose, inconsistent format. The fine-tuned model reliably produces structured output (`Sentiment: {label}. This statement reflects...`) that matches the target format with near-perfect fidelity. Label accuracy (fraction of examples where the predicted `positive / neutral / negative` label matches the ground truth) is now tracked alongside ROUGE metrics and printed in the eval output table.
 
 ## Architecture
 
@@ -144,13 +144,26 @@ data: [DONE]
 
 ## Eval Details
 
-ROUGE-L of 0.970 is high because the target format is short and structured. It's the right metric here since correct label + format is what matters. The remaining 3% gap comes from edge cases where the model disagrees with the annotator label (e.g. predicting neutral for ambiguous expansion announcements).
+ROUGE-L of 0.970 is high because the target format is short and structured. The remaining 3% gap comes from edge cases where the model disagrees with the annotator label (e.g. predicting neutral for ambiguous expansion announcements). **Label accuracy** (exact match of the `positive / neutral / negative` token) is now reported alongside ROUGE-1 and ROUGE-L in the output table, giving a more interpretable view of classification quality for this 3-class task.
+
+`eval/eval.py` accepts CLI arguments so it can be pointed at any JSONL file without editing source:
+
+```bash
+# Default — evaluates on data/valid.jsonl
+make eval
+
+# Out-of-domain dataset, 100 examples
+python eval/eval.py --data /path/to/ood.jsonl --n 100
+
+# Custom adapter path
+python eval/eval.py --adapter /path/to/my-adapter --n 50
+```
 
 Full per-example results in `eval/results.json` after running `make eval`.
 
 ## What I'd Do Next
 
 - **Richer output**: ✓ response now includes `label` and `explanation` fields parsed from structured model output
-- **Harder eval**: run on out-of-domain financial news (earnings calls, 10-K filings) to test generalization
+- **Harder eval**: ✓ `--data` flag now lets you point `eval/eval.py` at any JSONL file (earnings calls, 10-K filings, etc.) without editing source; label accuracy reported alongside ROUGE metrics
 - **Merge + requantize**: merge the LoRA adapter into the base weights and re-quantize to reduce inference overhead
 - **GPU serving**: right-size the ECS task for a GPU instance (g4dn.xlarge) and switch to vLLM for production throughput

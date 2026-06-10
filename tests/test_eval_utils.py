@@ -67,3 +67,56 @@ def test_load_examples(tmp_path):
     examples = eval_module.load_examples(str(jsonl), 3)
     assert len(examples) == 3
     assert "text" in examples[0]
+
+
+# --- label_accuracy tests ---
+
+_POS = "Sentiment: positive. This statement reflects favorable financial conditions."
+_NEG = "Sentiment: negative. This statement reflects unfavorable financial conditions."
+_NEU = "Sentiment: neutral. This is a neutral statement."
+
+
+def _make_result(ground_truth, finetuned):
+    return {"ground_truth": ground_truth, "finetuned": finetuned}
+
+
+def test_label_accuracy_perfect():
+    results = [
+        _make_result(_POS, _POS),
+        _make_result(_NEG, _NEG),
+        _make_result(_NEU, _NEU),
+    ]
+    assert eval_module.label_accuracy(results) == pytest.approx(1.0)
+
+
+def test_label_accuracy_zero():
+    results = [
+        _make_result(_POS, _NEG),
+        _make_result(_NEG, _NEU),
+    ]
+    assert eval_module.label_accuracy(results) == pytest.approx(0.0)
+
+
+def test_label_accuracy_partial():
+    results = [
+        _make_result(_POS, _POS),
+        _make_result(_NEG, _POS),
+        _make_result(_NEU, _NEU),
+        _make_result(_POS, _NEG),
+    ]
+    assert eval_module.label_accuracy(results) == pytest.approx(0.5)
+
+
+def test_label_accuracy_empty():
+    assert eval_module.label_accuracy([]) == pytest.approx(0.0)
+
+
+def test_label_accuracy_unknown_label():
+    results = [_make_result("No structured output here.", "Neither does this.")]
+    # both parse to 'unknown', which is equal — counts as correct
+    assert eval_module.label_accuracy(results) == pytest.approx(1.0)
+
+
+def test_label_accuracy_case_insensitive():
+    results = [_make_result("SENTIMENT: POSITIVE.", "Sentiment: positive. Explanation.")]
+    assert eval_module.label_accuracy(results) == pytest.approx(1.0)
