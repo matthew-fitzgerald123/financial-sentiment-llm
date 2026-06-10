@@ -1,7 +1,8 @@
 """
 Evaluate fine-tuned adapter vs base Mistral on the test set using ROUGE-L
 and label accuracy.
-Prints a comparison table and saves full results to eval/results.json.
+Prints a comparison table, saves full per-example results to eval/results.json,
+and saves aggregate metrics to eval/summary.json.
 
 Usage:
     python eval/eval.py
@@ -9,6 +10,7 @@ Usage:
 """
 import argparse
 import json
+import re
 from pathlib import Path
 from rouge_score import rouge_scorer
 from mlx_lm import load, generate
@@ -17,6 +19,7 @@ MODEL_ID = "mlx-community/Mistral-7B-Instruct-v0.3-4bit"
 ADAPTER_PATH = "./mistral-finetuned"
 VALID_JSONL = "./data/valid.jsonl"
 RESULTS_PATH = "./eval/results.json"
+SUMMARY_PATH = "./eval/summary.json"
 NUM_EXAMPLES = 50
 MAX_TOKENS = 128
 
@@ -41,7 +44,6 @@ def build_ground_truth(text):
 
 def _parse_label(text):
     """Return the sentiment label from a model output, or 'unknown'."""
-    import re
     m = re.search(r"Sentiment:\s*(positive|neutral|negative)", text, re.IGNORECASE)
     return m.group(1).lower() if m else "unknown"
 
@@ -63,9 +65,16 @@ def label_accuracy(results):
     return correct / len(results)
 
 
-def run_generate(model, tokenizer, question):
+def save_summary(path, summary):
+    """Write aggregate eval metrics to *path* as JSON."""
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(summary, f, indent=2)
+
+
+def run_generate(model, tokenizer, question, max_tokens=MAX_TOKENS):
     prompt = f"<s>[INST] {question} [/INST]"
-    return generate(model, tokenizer, prompt=prompt, max_tokens=MAX_TOKENS)
+    return generate(model, tokenizer, prompt=prompt, max_tokens=max_tokens)
 
 
 def main():
@@ -90,8 +99,8 @@ def main():
         question = build_question(ex["text"])
         ground_truth = build_ground_truth(ex["text"])
 
-        base_answer = run_generate(base_model, base_tok, question)
-        ft_answer = run_generate(ft_model, ft_tok, question)
+        base_answer = run_generate(base_model, base_tok, question, args.max_tokens)
+        ft_answer = run_generate(ft_model, ft_tok, question, args.max_tokens)
 
         base_scores = scorer.score(ground_truth, base_answer)
         ft_scores = scorer.score(ground_truth, ft_answer)
@@ -99,8 +108,11 @@ def main():
         results.append({
             "question": question,
             "ground_truth": ground_truth,
+            "gt_label": _parse_label(ground_truth),
             "base_model": base_answer,
+            "base_label": _parse_label(base_answer),
             "finetuned": ft_answer,
+            "ft_label": _parse_label(ft_answer),
             "base_rouge1": base_scores["rouge1"].fmeasure,
             "base_rougeL": base_scores["rougeL"].fmeasure,
             "ft_rouge1": ft_scores["rouge1"].fmeasure,
@@ -121,11 +133,24 @@ def main():
         for r in results
     ])
 
+    summary = {
+        "n_examples": len(results),
+        "data_path": args.data,
+        "base_rouge1": avg("base_rouge1"),
+        "base_rougeL": avg("base_rougeL"),
+        "ft_rouge1": avg("ft_rouge1"),
+        "ft_rougeL": avg("ft_rougeL"),
+        "label_accuracy_base": base_acc,
+        "label_accuracy_finetuned": ft_acc,
+    }
+    save_summary(SUMMARY_PATH, summary)
+
     print(f"\n{'Model':<20} {'ROUGE-1':>10} {'ROUGE-L':>10} {'Label Acc':>10}")
     print("-" * 54)
     print(f"{'Base Mistral-7B':<20} {avg('base_rouge1'):>10.3f} {avg('base_rougeL'):>10.3f} {base_acc:>10.3f}")
     print(f"{'Fine-tuned':<20} {avg('ft_rouge1'):>10.3f} {avg('ft_rougeL'):>10.3f} {ft_acc:>10.3f}")
-    print(f"\nFull results → {RESULTS_PATH}")
+    print(f"\nFull results  → {RESULTS_PATH}")
+    print(f"Summary       → {SUMMARY_PATH}")
     if args.data != VALID_JSONL:
         print(f"(Evaluated on out-of-domain dataset: {args.data})")
 
