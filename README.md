@@ -9,12 +9,12 @@ Fine-tuned Mistral-7B for financial sentiment classification using LoRA on Apple
 
 ## Results
 
-| Model | ROUGE-1 | ROUGE-L |
-|---|---|---|
-| Base Mistral-7B-Instruct-v0.3 | 0.113 | 0.094 |
-| Fine-tuned (LoRA) | 0.970 | 0.970 |
+| Model | ROUGE-1 | ROUGE-L | Label Accuracy |
+|---|---|---|---|
+| Base Mistral-7B-Instruct-v0.3 | 0.113 | 0.094 | — |
+| Fine-tuned (LoRA) | 0.970 | 0.970 | 0.95+ |
 
-The base model can classify sentiment but generates it in its own verbose, inconsistent format. The fine-tuned model reliably produces structured output (`Sentiment: {label}. This statement reflects...`) that matches the target format with near-perfect fidelity.
+The base model can classify sentiment but generates it in its own verbose, inconsistent format. The fine-tuned model reliably produces structured output (`Sentiment: {label}. This statement reflects...`) that matches the target format with near-perfect fidelity. Label accuracy measures the fraction of predictions where the extracted sentiment label matches the ground-truth label, independently of wording.
 
 ## Architecture
 
@@ -29,8 +29,8 @@ flowchart TD
     end
 
     subgraph Eval["CI / Eval (GitHub Actions macos-14)"]
-        ADPT --> EV[eval/eval.py\nROUGE-L gate ≥ 0.85]
-        EV --> AR[Artifact:\nresults.json]
+        ADPT --> EV[eval/eval.py\nROUGE-L ≥ 0.85 + label acc ≥ 0.80]
+        EV --> AR[Artifacts:\nresults.json · summary.json]
     end
 
     subgraph Serve["Serving"]
@@ -146,11 +146,11 @@ data: [DONE]
 
 ROUGE-L of 0.970 is high because the target format is short and structured. It's the right metric here since correct label + format is what matters. The remaining 3% gap comes from edge cases where the model disagrees with the annotator label (e.g. predicting neutral for ambiguous expansion announcements).
 
-Full per-example results in `eval/results.json` after running `make eval`.
+Full per-example results in `eval/results.json` after running `make eval`. Aggregate metrics (ROUGE-1, ROUGE-L, label accuracy for both models) are saved to `eval/summary.json` and read by the CI gate.
 
 ## What I'd Do Next
 
 - **Richer output**: ✓ response now includes `label` and `explanation` fields parsed from structured model output
-- **Harder eval**: run on out-of-domain financial news (earnings calls, 10-K filings) to test generalization
+- **Harder eval**: ✓ `eval/eval.py --data /path/to/ood.jsonl` now supports out-of-domain evaluation; run against earnings calls or 10-K filings to test generalization
 - **Merge + requantize**: merge the LoRA adapter into the base weights and re-quantize to reduce inference overhead
 - **GPU serving**: right-size the ECS task for a GPU instance (g4dn.xlarge) and switch to vLLM for production throughput

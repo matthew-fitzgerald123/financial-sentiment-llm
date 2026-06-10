@@ -41,19 +41,29 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: eval-results-${{ github.sha }}
-          path: eval/results.json
+          path: |
+            eval/results.json
+            eval/summary.json
           retention-days: 30
 
       - name: Gate on ROUGE-L threshold
         run: |
           python - <<'EOF'
           import json, sys
-          with open("eval/results.json") as f:
-              results = json.load(f)
-          avg_rougeL = sum(r["ft_rougeL"] for r in results) / len(results)
-          print(f"avg fine-tuned ROUGE-L: {avg_rougeL:.3f}")
-          if avg_rougeL < 0.85:
+          with open("eval/summary.json") as f:
+              s = json.load(f)
+          rougeL = s["ft_rougeL"]
+          label_acc = s["label_accuracy_finetuned"]
+          print(f"avg fine-tuned ROUGE-L:    {rougeL:.3f}")
+          print(f"fine-tuned label accuracy: {label_acc:.3f}")
+          failed = False
+          if rougeL < 0.85:
               print("FAIL: ROUGE-L below 0.85 threshold")
+              failed = True
+          if label_acc < 0.80:
+              print("FAIL: label accuracy below 0.80 threshold")
+              failed = True
+          if failed:
               sys.exit(1)
           print("PASS")
           EOF
