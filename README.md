@@ -144,7 +144,20 @@ data: [DONE]
 
 ## Eval Details
 
-ROUGE-L of 0.970 is high because the target format is short and structured. It's the right metric here since correct label + format is what matters. The remaining 3% gap comes from edge cases where the model disagrees with the annotator label (e.g. predicting neutral for ambiguous expansion announcements).
+ROUGE-L of 0.970 is high because the target format is short and structured. The remaining 3% gap comes from edge cases where the model disagrees with the annotator label (e.g. predicting neutral for ambiguous expansion announcements). **Label accuracy** (exact match of the `positive / neutral / negative` token) is now reported alongside ROUGE-1 and ROUGE-L in the output table, giving a more interpretable view of classification quality for this 3-class task.
+
+`eval/eval.py` accepts CLI arguments so it can be pointed at any JSONL file without editing source:
+
+```bash
+# Default — evaluates on data/valid.jsonl
+make eval
+
+# Out-of-domain dataset, 100 examples
+python eval/eval.py --data /path/to/ood.jsonl --n 100
+
+# Custom adapter path
+python eval/eval.py --adapter /path/to/my-adapter --n 50
+```
 
 Full per-example results in `eval/results.json` after running `make eval`. Aggregate metrics (ROUGE-1, ROUGE-L, label accuracy for both models) are saved to `eval/summary.json` and read by the CI gate.
 
