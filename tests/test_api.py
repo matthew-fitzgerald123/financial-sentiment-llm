@@ -56,9 +56,11 @@ def test_predict_returns_answer(client):
     data = r.json()
     assert "answer" in data
     assert "label" in data
+    assert "explanation" in data
     assert "model_version" in data
     assert len(data["answer"]) > 0
     assert data["label"] == "positive"
+    assert "favorable" in data["explanation"]
 
 
 def test_predict_missing_question(client):
