@@ -121,6 +121,7 @@ curl -X POST http://localhost:8080/predict \
 {
   "answer": "Sentiment: positive. This statement reflects favorable financial conditions.",
   "label": "positive",
+  "explanation": "This statement reflects favorable financial conditions.",
   "model_version": "mistral-7b-finance-mlx-lora-v1"
 }
 ```
@@ -149,7 +150,7 @@ Full per-example results in `eval/results.json` after running `make eval`.
 
 ## What I'd Do Next
 
-- **Richer output**: add explanation of *why* the sentiment is positive/negative, not just the label
+- **Richer output**: ✓ response now includes `label` and `explanation` fields parsed from structured model output
 - **Harder eval**: run on out-of-domain financial news (earnings calls, 10-K filings) to test generalization
 - **Merge + requantize**: merge the LoRA adapter into the base weights and re-quantize to reduce inference overhead
 - **GPU serving**: right-size the ECS task for a GPU instance (g4dn.xlarge) and switch to vLLM for production throughput
