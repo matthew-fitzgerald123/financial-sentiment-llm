@@ -66,6 +66,12 @@ def test_predict_missing_question(client):
     assert r.status_code == 422
 
 
+def test_predict_empty_question(client):
+    """Empty question string must be rejected with 422."""
+    r = client.post("/predict", json={"question": ""})
+    assert r.status_code == 422
+
+
 def test_predict_stream_done_event(client):
     r = client.post(
         "/predict/stream",
