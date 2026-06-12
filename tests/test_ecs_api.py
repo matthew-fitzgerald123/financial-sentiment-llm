@@ -83,6 +83,18 @@ def test_predict_missing_question(client):
     assert r.status_code == 422
 
 
+def test_predict_empty_question(client):
+    """Empty question string must be rejected with 422."""
+    r = client.post("/predict", json={"question": ""})
+    assert r.status_code == 422
+
+
+def test_predict_stream_empty_question(client):
+    """Empty question string must be rejected on the streaming endpoint too."""
+    r = client.post("/predict/stream", json={"question": ""})
+    assert r.status_code == 422
+
+
 def test_predict_respects_max_tokens(client):
     """max_tokens field is accepted without error."""
     r = client.post(

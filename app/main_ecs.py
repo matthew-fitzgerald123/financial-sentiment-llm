@@ -14,7 +14,7 @@ from threading import Event
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.utils import parse_sentiment_explanation, parse_sentiment_label
 
@@ -65,7 +65,7 @@ app = FastAPI(title="Financial Sentiment LLM API (ECS)", lifespan=lifespan)
 
 
 class Query(BaseModel):
-    question: str
+    question: str = Field(..., min_length=1)
     max_tokens: int = 256
 
 
