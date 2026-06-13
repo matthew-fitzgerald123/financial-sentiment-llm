@@ -2,7 +2,8 @@
 Evaluate fine-tuned adapter vs base Mistral on the test set using ROUGE-L
 and label accuracy.
 Prints a comparison table, saves full per-example results to eval/results.json,
-and saves aggregate metrics to eval/summary.json.
+saves aggregate metrics to eval/summary.json, and logs metrics to the shared
+MLflow experiment.
 
 Usage:
     python eval/eval.py
@@ -13,6 +14,7 @@ import json
 import re
 from pathlib import Path
 from rouge_score import rouge_scorer
+import mlflow
 from mlx_lm import load, generate
 
 MODEL_ID = "mlx-community/Mistral-7B-Instruct-v0.3-4bit"
@@ -22,6 +24,7 @@ RESULTS_PATH = "./eval/results.json"
 SUMMARY_PATH = "./eval/summary.json"
 NUM_EXAMPLES = 50
 MAX_TOKENS = 128
+ROUGE_L_GATE = 0.85
 
 
 def load_examples(path, n):
@@ -77,6 +80,27 @@ def run_generate(model, tokenizer, question, max_tokens=MAX_TOKENS):
     return generate(model, tokenizer, prompt=prompt, max_tokens=max_tokens)
 
 
+def compute_averages(results: list[dict]) -> dict:
+    """Compute average ROUGE metrics from a list of per-example result dicts.
+
+    Returns a flat dict with keys:
+      base_avg_rouge1, base_avg_rougeL, ft_avg_rouge1, ft_avg_rougeL,
+      ft_rougeL_gate_passed (bool)
+    """
+    n = len(results)
+    base_r1 = sum(r["base_rouge1"] for r in results) / n
+    base_rL = sum(r["base_rougeL"] for r in results) / n
+    ft_r1   = sum(r["ft_rouge1"]   for r in results) / n
+    ft_rL   = sum(r["ft_rougeL"]   for r in results) / n
+    return {
+        "base_avg_rouge1":     base_r1,
+        "base_avg_rougeL":     base_rL,
+        "ft_avg_rouge1":       ft_r1,
+        "ft_avg_rougeL":       ft_rL,
+        "ft_rougeL_gate_passed": ft_rL >= ROUGE_L_GATE,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Evaluate fine-tuned vs base model")
     parser.add_argument("--data", default=VALID_JSONL, help="JSONL file to evaluate on")
@@ -126,7 +150,7 @@ def main():
     with open(RESULTS_PATH, "w") as f:
         json.dump(results, f, indent=2)
 
-    avg = lambda key: sum(r[key] for r in results) / len(results)
+    avgs = compute_averages(results)
     ft_acc = label_accuracy(results)
     base_acc = label_accuracy([
         {"ground_truth": r["ground_truth"], "finetuned": r["base_model"]}
@@ -136,21 +160,42 @@ def main():
     summary = {
         "n_examples": len(results),
         "data_path": args.data,
-        "base_rouge1": avg("base_rouge1"),
-        "base_rougeL": avg("base_rougeL"),
-        "ft_rouge1": avg("ft_rouge1"),
-        "ft_rougeL": avg("ft_rougeL"),
+        "base_rouge1": avgs["base_avg_rouge1"],
+        "base_rougeL": avgs["base_avg_rougeL"],
+        "ft_rouge1": avgs["ft_avg_rouge1"],
+        "ft_rougeL": avgs["ft_avg_rougeL"],
         "label_accuracy_base": base_acc,
         "label_accuracy_finetuned": ft_acc,
     }
     save_summary(SUMMARY_PATH, summary)
 
+    mlflow.set_experiment("mistral-finance-mlx-lora")
+    with mlflow.start_run(run_name="eval"):
+        mlflow.set_tag("run_type", "eval")
+        mlflow.log_metrics({
+            "base_avg_rouge1":        avgs["base_avg_rouge1"],
+            "base_avg_rougeL":        avgs["base_avg_rougeL"],
+            "ft_avg_rouge1":          avgs["ft_avg_rouge1"],
+            "ft_avg_rougeL":          avgs["ft_avg_rougeL"],
+            "label_accuracy_base":    base_acc,
+            "label_accuracy_finetuned": ft_acc,
+        })
+        mlflow.log_param("num_examples", len(results))
+        mlflow.log_param("rouge_l_gate", ROUGE_L_GATE)
+        mlflow.log_param("gate_passed", avgs["ft_rougeL_gate_passed"])
+        mlflow.log_param("data_path", args.data)
+        mlflow.log_artifact(RESULTS_PATH)
+        mlflow.log_artifact(SUMMARY_PATH)
+
     print(f"\n{'Model':<20} {'ROUGE-1':>10} {'ROUGE-L':>10} {'Label Acc':>10}")
     print("-" * 54)
-    print(f"{'Base Mistral-7B':<20} {avg('base_rouge1'):>10.3f} {avg('base_rougeL'):>10.3f} {base_acc:>10.3f}")
-    print(f"{'Fine-tuned':<20} {avg('ft_rouge1'):>10.3f} {avg('ft_rougeL'):>10.3f} {ft_acc:>10.3f}")
-    print(f"\nFull results  → {RESULTS_PATH}")
+    print(f"{'Base Mistral-7B':<20} {avgs['base_avg_rouge1']:>10.3f} {avgs['base_avg_rougeL']:>10.3f} {base_acc:>10.3f}")
+    print(f"{'Fine-tuned':<20} {avgs['ft_avg_rouge1']:>10.3f} {avgs['ft_avg_rougeL']:>10.3f} {ft_acc:>10.3f}")
+    gate_status = "PASS" if avgs["ft_rougeL_gate_passed"] else "FAIL"
+    print(f"\nROUGE-L gate (≥{ROUGE_L_GATE}): {gate_status}")
+    print(f"Full results  → {RESULTS_PATH}")
     print(f"Summary       → {SUMMARY_PATH}")
+    print("Metrics logged to MLflow experiment 'mistral-finance-mlx-lora'")
     if args.data != VALID_JSONL:
         print(f"(Evaluated on out-of-domain dataset: {args.data})")
 

@@ -31,6 +31,7 @@ flowchart TD
     subgraph Eval["CI / Eval (GitHub Actions macos-14)"]
         ADPT --> EV[eval/eval.py\nROUGE-L ≥ 0.85 + label acc ≥ 0.80]
         EV --> AR[Artifacts:\nresults.json · summary.json]
+        EV --> MLF
     end
 
     subgraph Serve["Serving"]
@@ -159,7 +160,7 @@ python eval/eval.py --data /path/to/ood.jsonl --n 100
 python eval/eval.py --adapter /path/to/my-adapter --n 50
 ```
 
-Full per-example results in `eval/results.json` after running `make eval`. Aggregate metrics (ROUGE-1, ROUGE-L, label accuracy for both models) are saved to `eval/summary.json` and read by the CI gate.
+Full per-example results in `eval/results.json` after running `make eval`. Aggregate metrics (ROUGE-1, ROUGE-L, label accuracy for both models) are saved to `eval/summary.json` and read by the CI gate. All metrics and the gate result are also logged to the MLflow experiment `mistral-finance-mlx-lora`.
 
 ## What I'd Do Next
 
