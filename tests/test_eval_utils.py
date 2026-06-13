@@ -193,3 +193,66 @@ def test_save_summary_required_keys(tmp_path):
     loaded = json.loads(out.read_text())
     for key in ("ft_rougeL", "label_accuracy_finetuned"):
         assert key in loaded, f"CI gate key '{key}' missing from summary"
+
+
+# ---------------------------------------------------------------------------
+# compute_averages
+# ---------------------------------------------------------------------------
+
+def _make_rouge_result(base_r1, base_rL, ft_r1, ft_rL):
+    return {
+        "base_rouge1": base_r1,
+        "base_rougeL": base_rL,
+        "ft_rouge1": ft_r1,
+        "ft_rougeL": ft_rL,
+    }
+
+
+def test_compute_averages_single_result():
+    results = [_make_rouge_result(0.5, 0.4, 0.9, 0.95)]
+    avgs = eval_module.compute_averages(results)
+    assert avgs["base_avg_rouge1"] == pytest.approx(0.5)
+    assert avgs["base_avg_rougeL"] == pytest.approx(0.4)
+    assert avgs["ft_avg_rouge1"] == pytest.approx(0.9)
+    assert avgs["ft_avg_rougeL"] == pytest.approx(0.95)
+
+
+def test_compute_averages_multiple_results():
+    results = [
+        _make_rouge_result(0.2, 0.1, 0.8, 0.9),
+        _make_rouge_result(0.4, 0.3, 1.0, 1.0),
+    ]
+    avgs = eval_module.compute_averages(results)
+    assert avgs["base_avg_rouge1"] == pytest.approx(0.3)
+    assert avgs["base_avg_rougeL"] == pytest.approx(0.2)
+    assert avgs["ft_avg_rouge1"] == pytest.approx(0.9)
+    assert avgs["ft_avg_rougeL"] == pytest.approx(0.95)
+
+
+def test_compute_averages_gate_passed_above_threshold():
+    results = [_make_rouge_result(0.1, 0.1, 0.9, 0.9)]
+    avgs = eval_module.compute_averages(results)
+    assert avgs["ft_rougeL_gate_passed"] is True
+
+
+def test_compute_averages_gate_failed_below_threshold():
+    results = [_make_rouge_result(0.1, 0.1, 0.5, 0.5)]
+    avgs = eval_module.compute_averages(results)
+    assert avgs["ft_rougeL_gate_passed"] is False
+
+
+def test_compute_averages_gate_exactly_at_threshold():
+    results = [_make_rouge_result(0.1, 0.1, 0.85, 0.85)]
+    avgs = eval_module.compute_averages(results)
+    assert avgs["ft_rougeL_gate_passed"] is True
+
+
+def test_compute_averages_returns_expected_keys():
+    results = [_make_rouge_result(0.5, 0.5, 0.9, 0.9)]
+    avgs = eval_module.compute_averages(results)
+    expected_keys = {
+        "base_avg_rouge1", "base_avg_rougeL",
+        "ft_avg_rouge1", "ft_avg_rougeL",
+        "ft_rougeL_gate_passed",
+    }
+    assert set(avgs.keys()) == expected_keys
