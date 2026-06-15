@@ -114,7 +114,7 @@ def test_predict_stream_done_event(client):
     with patch("app.main_ecs._stream_into_queue", side_effect=_fake_stream):
         r = client.post(
             "/predict/stream",
-            json={"question": "Classify sentiment: 'Revenue fell 8%."},
+            json={"question": "Classify sentiment: 'Revenue fell 8%.\'" },
         )
 
     assert r.status_code == 200
@@ -152,7 +152,7 @@ def test_predict_stream_token_format(client):
     with patch("app.main_ecs._stream_into_queue", side_effect=_emit_one_token):
         r = client.post(
             "/predict/stream",
-            json={"question": "Classify: 'EPS beat estimates by 15%."},
+            json={"question": "Classify: 'EPS beat estimates by 15%.\'" },
         )
 
     assert r.status_code == 200
