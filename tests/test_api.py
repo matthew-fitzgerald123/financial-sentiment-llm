@@ -68,11 +68,17 @@ def test_predict_missing_question(client):
     assert r.status_code == 422
 
 
+def test_predict_empty_question(client):
+    """Empty question string must be rejected with 422."""
+    r = client.post("/predict", json={"question": ""})
+    assert r.status_code == 422
+
+
 def test_predict_respects_max_tokens(client):
     """max_tokens field is accepted without error."""
     r = client.post(
         "/predict",
-        json={"question": "Classify: 'Revenue rose 12%.'", "max_tokens": 64},
+        json={"question": "Classify: 'Revenue rose 12%.'" , "max_tokens": 64},
     )
     assert r.status_code == 200
     assert "answer" in r.json()
@@ -108,3 +114,31 @@ def test_predict_stream_done_event(client):
     assert r.status_code == 200
     assert "text/event-stream" in r.headers["content-type"]
     assert "data: [DONE]" in r.text
+
+
+def test_predict_stream_empty_question(client):
+    """Empty question string must be rejected on the streaming endpoint too."""
+    r = client.post("/predict/stream", json={"question": ""})
+    assert r.status_code == 422
+
+
+def test_predict_stream_token_format(client):
+    """Tokens emitted before [DONE] must be valid JSON with 'token' and 'model_version'."""
+    import json as _json
+
+    class _FakeChunk:
+        def __init__(self, text):
+            self.text = text
+
+    with patch("app.main.stream_generate", return_value=iter([_FakeChunk("positive")])):
+        r = client.post(
+            "/predict/stream",
+            json={"question": "Classify: 'EPS beat estimates by 15%.'" },
+        )
+
+    assert r.status_code == 200
+    lines = [ln for ln in r.text.splitlines() if ln.startswith("data:") and "[DONE]" not in ln]
+    assert len(lines) >= 1
+    payload = _json.loads(lines[0].removeprefix("data: "))
+    assert "token" in payload
+    assert "model_version" in payload

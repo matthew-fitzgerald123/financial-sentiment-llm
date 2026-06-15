@@ -83,11 +83,23 @@ def test_predict_missing_question(client):
     assert r.status_code == 422
 
 
+def test_predict_empty_question(client):
+    """Empty question string must be rejected with 422."""
+    r = client.post("/predict", json={"question": ""})
+    assert r.status_code == 422
+
+
+def test_predict_stream_empty_question(client):
+    """Empty question string must be rejected on the streaming endpoint too."""
+    r = client.post("/predict/stream", json={"question": ""})
+    assert r.status_code == 422
+
+
 def test_predict_respects_max_tokens(client):
     """max_tokens field is accepted without error."""
     r = client.post(
         "/predict",
-        json={"question": "Classify: 'Revenue rose 12%.'", "max_tokens": 64},
+        json={"question": "Classify: 'Revenue rose 12%.'" , "max_tokens": 64},
     )
     assert r.status_code == 200
     assert "answer" in r.json()
@@ -102,7 +114,7 @@ def test_predict_stream_done_event(client):
     with patch("app.main_ecs._stream_into_queue", side_effect=_fake_stream):
         r = client.post(
             "/predict/stream",
-            json={"question": "Classify sentiment: 'Revenue fell 8%.'"},
+            json={"question": "Classify sentiment: 'Revenue fell 8%.'" },
         )
 
     assert r.status_code == 200
@@ -140,7 +152,7 @@ def test_predict_stream_token_format(client):
     with patch("app.main_ecs._stream_into_queue", side_effect=_emit_one_token):
         r = client.post(
             "/predict/stream",
-            json={"question": "Classify: 'EPS beat estimates by 15%.'"},
+            json={"question": "Classify: 'EPS beat estimates by 15%.'" },
         )
 
     assert r.status_code == 200
