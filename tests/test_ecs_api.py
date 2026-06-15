@@ -110,6 +110,26 @@ def test_predict_stream_done_event(client):
     assert "data: [DONE]" in r.text
 
 
+def test_predict_503_when_pipeline_not_loaded(client):
+    """Predict endpoint returns 503 when the pipeline global is None."""
+    with patch("app.main_ecs.pipeline", None):
+        r = client.post(
+            "/predict",
+            json={"question": "Classify: 'Revenue fell.'"},
+        )
+    assert r.status_code == 503
+
+
+def test_predict_stream_503_when_pipeline_not_loaded(client):
+    """Streaming endpoint returns 503 when the pipeline global is None."""
+    with patch("app.main_ecs.pipeline", None):
+        r = client.post(
+            "/predict/stream",
+            json={"question": "Classify: 'Revenue fell.'"},
+        )
+    assert r.status_code == 503
+
+
 def test_predict_stream_token_format(client):
     """Tokens emitted before [DONE] must be valid JSON with 'token' and 'model_version'."""
 
