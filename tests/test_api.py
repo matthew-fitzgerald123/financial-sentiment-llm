@@ -133,7 +133,7 @@ def test_predict_stream_token_format(client):
     with patch("app.main.stream_generate", return_value=iter([_FakeChunk("positive")])):
         r = client.post(
             "/predict/stream",
-            json={"question": "Classify: 'EPS beat estimates by 15%.'" },
+            json={"question": "Classify: 'EPS beat estimates by 15%."},
         )
 
     assert r.status_code == 200
