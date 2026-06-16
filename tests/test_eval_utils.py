@@ -256,3 +256,40 @@ def test_compute_averages_returns_expected_keys():
         "ft_rougeL_gate_passed",
     }
     assert set(avgs.keys()) == expected_keys
+
+
+# --- check_gate tests ---
+
+def _make_results(ft_rougeL_values):
+    return [{"ft_rougeL": v} for v in ft_rougeL_values]
+
+
+def test_check_gate_passes_above_threshold():
+    avg, passed = eval_module.check_gate(_make_results([0.90, 0.95, 0.92]))
+    assert passed is True
+    assert avg == pytest.approx((0.90 + 0.95 + 0.92) / 3)
+
+
+def test_check_gate_fails_below_threshold():
+    avg, passed = eval_module.check_gate(_make_results([0.70, 0.75, 0.80]))
+    assert passed is False
+    assert avg < 0.85
+
+
+def test_check_gate_passes_exactly_at_threshold():
+    avg, passed = eval_module.check_gate(_make_results([0.85, 0.85, 0.85]))
+    assert passed is True
+    assert avg == pytest.approx(0.85)
+
+
+def test_check_gate_single_result_fail():
+    avg, passed = eval_module.check_gate(_make_results([0.84]))
+    assert passed is False
+
+
+def test_check_gate_custom_threshold():
+    avg, passed = eval_module.check_gate(_make_results([0.60, 0.65]), threshold=0.50)
+    assert passed is True
+
+    avg2, passed2 = eval_module.check_gate(_make_results([0.40, 0.45]), threshold=0.50)
+    assert passed2 is False
