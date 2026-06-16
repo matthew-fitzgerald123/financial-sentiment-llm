@@ -101,6 +101,15 @@ def compute_averages(results: list[dict]) -> dict:
     }
 
 
+ROUGE_L_THRESHOLD = 0.85
+
+
+def check_gate(results: list, threshold: float = ROUGE_L_THRESHOLD) -> tuple:
+    """Return (avg_ft_rougeL, passed) where passed is True iff avg >= threshold."""
+    avg = sum(r["ft_rougeL"] for r in results) / len(results)
+    return avg, avg >= threshold
+
+
 def main():
     parser = argparse.ArgumentParser(description="Evaluate fine-tuned vs base model")
     parser.add_argument("--data", default=VALID_JSONL, help="JSONL file to evaluate on")
@@ -198,6 +207,12 @@ def main():
     print("Metrics logged to MLflow experiment 'mistral-finance-mlx-lora'")
     if args.data != VALID_JSONL:
         print(f"(Evaluated on out-of-domain dataset: {args.data})")
+
+    avg_rougeL, passed = check_gate(results)
+    print(f"\nROUGE-L gate (>= {ROUGE_L_THRESHOLD}): avg={avg_rougeL:.3f} {'PASS' if passed else 'FAIL'}")
+    if not passed:
+        import sys
+        sys.exit(1)
 
 
 if __name__ == "__main__":
