@@ -88,6 +88,9 @@ make train
 # Evaluate base vs fine-tuned
 make eval
 
+# Evaluate on bundled out-of-domain fixture (earnings calls, 10-K filings)
+make eval-ood
+
 # Run test suite (no model weights required)
 make test
 
@@ -153,7 +156,10 @@ ROUGE-L of 0.970 is high because the target format is short and structured. The 
 # Default — evaluates on data/valid.jsonl
 make eval
 
-# Out-of-domain dataset, 100 examples
+# Bundled OOD fixture (earnings calls, 10-K filings) — no extra data needed
+make eval-ood
+
+# Custom out-of-domain dataset
 python eval/eval.py --data /path/to/ood.jsonl --n 100
 
 # Custom adapter path
@@ -165,6 +171,6 @@ Full per-example results in `eval/results.json` after running `make eval`. Aggre
 ## What I'd Do Next
 
 - **Richer output**: ✓ response now includes `label` and `explanation` fields parsed from structured model output
-- **Harder eval**: ✓ `eval/eval.py --data /path/to/ood.jsonl` now supports out-of-domain evaluation; run against earnings calls or 10-K filings to test generalization
+- **Harder eval**: ✓ `data/ood_sample.jsonl` bundles 10 earnings-call / 10-K examples; `make eval-ood` runs the full OOD evaluation in one command
 - **Merge + requantize**: merge the LoRA adapter into the base weights and re-quantize to reduce inference overhead
 - **GPU serving**: right-size the ECS task for a GPU instance (g4dn.xlarge) and switch to vLLM for production throughput
