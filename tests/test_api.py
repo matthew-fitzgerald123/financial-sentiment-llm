@@ -74,6 +74,16 @@ def test_predict_empty_question(client):
     assert r.status_code == 422
 
 
+def test_predict_respects_max_tokens(client):
+    """max_tokens field is accepted without error."""
+    r = client.post(
+        "/predict",
+        json={"question": "Classify: 'Revenue rose 12%.'", "max_tokens": 64},
+    )
+    assert r.status_code == 200
+    assert "answer" in r.json()
+
+
 def test_predict_stream_done_event(client):
     """Streaming endpoint should always emit the [DONE] sentinel."""
     with patch("app.main.stream_generate", return_value=iter([])):
