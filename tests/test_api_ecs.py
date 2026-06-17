@@ -118,3 +118,17 @@ def test_predict_stream_token_format(client):
     payload = json.loads(lines[0].removeprefix("data: "))
     assert "token" in payload
     assert "model_version" in payload
+
+
+def test_predict_503_when_pipeline_not_loaded(client):
+    """503 is returned when pipeline is None (e.g. model startup failure)."""
+    with patch("app.main_ecs.pipeline", None):
+        r = client.post("/predict", json={"question": "Classify: 'Revenue fell.'"})
+    assert r.status_code == 503
+
+
+def test_predict_stream_503_when_pipeline_not_loaded(client):
+    """503 is returned on the streaming endpoint when pipeline is None."""
+    with patch("app.main_ecs.pipeline", None):
+        r = client.post("/predict/stream", json={"question": "Classify: 'Revenue fell.'"})
+    assert r.status_code == 503
