@@ -1,4 +1,4 @@
-.PHONY: install prepare train eval mlflow serve serve-ecs benchmark test
+.PHONY: install prepare train eval eval-ood mlflow serve serve-ecs benchmark test
 
 install:
 	pip install -r requirements.txt
@@ -12,6 +12,9 @@ train:
 
 eval:
 	python eval/eval.py
+
+eval-ood:
+	python eval/eval.py --data data/ood_sample.jsonl --n 10
 
 mlflow:
 	mlflow ui --host 127.0.0.1 --port 5000
