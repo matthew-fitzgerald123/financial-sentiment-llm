@@ -25,6 +25,7 @@ SUMMARY_PATH = "./eval/summary.json"
 NUM_EXAMPLES = 50
 MAX_TOKENS = 128
 ROUGE_L_GATE = 0.85
+LABEL_ACC_GATE = 0.80
 
 
 def load_examples(path, n):
@@ -102,12 +103,18 @@ def compute_averages(results: list[dict]) -> dict:
 
 
 ROUGE_L_THRESHOLD = 0.85
+LABEL_ACC_THRESHOLD = 0.80
 
 
 def check_gate(results: list, threshold: float = ROUGE_L_THRESHOLD) -> tuple:
     """Return (avg_ft_rougeL, passed) where passed is True iff avg >= threshold."""
     avg = sum(r["ft_rougeL"] for r in results) / len(results)
     return avg, avg >= threshold
+
+
+def check_label_accuracy_gate(accuracy: float, threshold: float = LABEL_ACC_THRESHOLD) -> tuple:
+    """Return (accuracy, passed) where passed is True iff accuracy >= threshold."""
+    return accuracy, accuracy >= threshold
 
 
 def main():
@@ -211,6 +218,12 @@ def main():
     avg_rougeL, passed = check_gate(results)
     print(f"\nROUGE-L gate (>= {ROUGE_L_THRESHOLD}): avg={avg_rougeL:.3f} {'PASS' if passed else 'FAIL'}")
     if not passed:
+        import sys
+        sys.exit(1)
+
+    acc, acc_passed = check_label_accuracy_gate(ft_acc)
+    print(f"Label accuracy gate (>= {LABEL_ACC_THRESHOLD}): acc={acc:.3f} {'PASS' if acc_passed else 'FAIL'}")
+    if not acc_passed:
         import sys
         sys.exit(1)
 

@@ -293,3 +293,56 @@ def test_check_gate_custom_threshold():
 
     avg2, passed2 = eval_module.check_gate(_make_results([0.40, 0.45]), threshold=0.50)
     assert passed2 is False
+
+
+# --- check_label_accuracy_gate tests ---
+
+def test_check_label_accuracy_gate_passes_above_threshold():
+    acc, passed = eval_module.check_label_accuracy_gate(0.90)
+    assert passed is True
+    assert acc == pytest.approx(0.90)
+
+
+def test_check_label_accuracy_gate_fails_below_threshold():
+    acc, passed = eval_module.check_label_accuracy_gate(0.75)
+    assert passed is False
+    assert acc == pytest.approx(0.75)
+
+
+def test_check_label_accuracy_gate_passes_exactly_at_threshold():
+    acc, passed = eval_module.check_label_accuracy_gate(0.80)
+    assert passed is True
+    assert acc == pytest.approx(0.80)
+
+
+def test_check_label_accuracy_gate_fails_just_below_threshold():
+    _, passed = eval_module.check_label_accuracy_gate(0.799)
+    assert passed is False
+
+
+def test_check_label_accuracy_gate_custom_threshold_pass():
+    _, passed = eval_module.check_label_accuracy_gate(0.70, threshold=0.60)
+    assert passed is True
+
+
+def test_check_label_accuracy_gate_custom_threshold_fail():
+    _, passed = eval_module.check_label_accuracy_gate(0.50, threshold=0.60)
+    assert passed is False
+
+
+def test_check_label_accuracy_gate_returns_tuple():
+    result = eval_module.check_label_accuracy_gate(0.85)
+    assert isinstance(result, tuple)
+    assert len(result) == 2
+
+
+def test_check_label_accuracy_gate_perfect_accuracy():
+    acc, passed = eval_module.check_label_accuracy_gate(1.0)
+    assert passed is True
+    assert acc == pytest.approx(1.0)
+
+
+def test_check_label_accuracy_gate_zero_accuracy():
+    acc, passed = eval_module.check_label_accuracy_gate(0.0)
+    assert passed is False
+    assert acc == pytest.approx(0.0)
