@@ -2,6 +2,7 @@
 Tests for the ECS/Docker FastAPI inference service (app/main_ecs.py).
 MOCK_MODE is patched to True so no model weights or GPU are required.
 """
+import json
 from unittest.mock import patch
 
 import pytest
@@ -72,6 +73,16 @@ def test_predict_empty_question(client):
     assert r.status_code == 422
 
 
+def test_predict_respects_max_tokens(client):
+    """max_tokens field is accepted without error."""
+    r = client.post(
+        "/predict",
+        json={"question": "Classify: 'Revenue rose 12%.'", "max_tokens": 64},
+    )
+    assert r.status_code == 200
+    assert "answer" in r.json()
+
+
 def test_predict_stream_done_event(client):
     r = client.post(
         "/predict/stream",
@@ -80,3 +91,30 @@ def test_predict_stream_done_event(client):
     assert r.status_code == 200
     assert "text/event-stream" in r.headers["content-type"]
     assert "data: [DONE]" in r.text
+
+
+def test_predict_stream_empty_question(client):
+    """Empty question string must be rejected on the streaming endpoint too."""
+    r = client.post("/predict/stream", json={"question": ""})
+    assert r.status_code == 422
+
+
+def test_predict_stream_token_format(client):
+    """Tokens emitted before [DONE] must be valid JSON with 'token' and 'model_version'."""
+
+    def _emit_one_token(question, max_tokens, q, done):
+        q.put("positive")
+        done.set()
+
+    with patch("app.main_ecs._stream_into_queue", side_effect=_emit_one_token):
+        r = client.post(
+            "/predict/stream",
+            json={"question": "Classify: 'EPS beat estimates by 15%.'"},
+        )
+
+    assert r.status_code == 200
+    lines = [ln for ln in r.text.splitlines() if ln.startswith("data:") and "[DONE]" not in ln]
+    assert len(lines) >= 1
+    payload = json.loads(lines[0].removeprefix("data: "))
+    assert "token" in payload
+    assert "model_version" in payload
