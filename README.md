@@ -91,6 +91,9 @@ make eval
 # Run test suite (no model weights required)
 make test
 
+# Benchmark LoRA scale vs latency/quality (requires trained adapter)
+make benchmark
+
 # Serve locally at http://localhost:8080
 make serve
 ```
