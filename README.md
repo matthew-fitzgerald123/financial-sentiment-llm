@@ -176,5 +176,5 @@ Full per-example results in `eval/results.json` after running `make eval`. Aggre
 
 - **Richer output**: ✓ response now includes `label` and `explanation` fields parsed from structured model output
 - **Harder eval**: ✓ `data/ood_sample.jsonl` bundles 10 earnings-call / 10-K examples; `make eval-ood` runs the full OOD evaluation in one command
-- **Merge + requantize**: merge the LoRA adapter into the base weights and re-quantize to reduce inference overhead
+- **Merge + requantize**: ✓ `train/fuse.py` merges the LoRA adapter into the base weights via `mlx_lm fuse`, then re-quantizes the merged model back to 4-bit via `mlx_lm convert`; run with `make fuse`
 - **GPU serving**: right-size the ECS task for a GPU instance (g4dn.xlarge) and switch to vLLM for production throughput

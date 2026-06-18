@@ -1,4 +1,4 @@
-.PHONY: install prepare train eval eval-ood mlflow serve serve-ecs benchmark test
+.PHONY: install prepare train fuse eval eval-ood mlflow serve serve-ecs benchmark test
 
 install:
 	pip install -r requirements.txt
@@ -9,6 +9,9 @@ prepare:
 
 train:
 	caffeinate -i python train/train.py
+
+fuse:
+	python train/fuse.py
 
 eval:
 	python eval/eval.py
