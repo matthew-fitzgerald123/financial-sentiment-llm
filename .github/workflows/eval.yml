@@ -19,11 +19,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-          pip install -r app/requirements.txt
+          $pythonLocation/bin/python -m pip install -r requirements.txt
+          $pythonLocation/bin/python -m pip install -r app/requirements.txt
 
       - name: Prepare dataset
-        run: python data/prepare.py
+        run: $pythonLocation/bin/python data/prepare.py
 
       - name: Restore adapter cache
         uses: actions/cache@v4
@@ -33,7 +33,7 @@ jobs:
           key: adapter-${{ hashFiles('lora_config.yaml') }}
 
       - name: Run evaluation
-        run: python eval/eval.py
+        run: $pythonLocation/bin/python eval/eval.py
         env:
           HF_HUB_ENABLE_HF_TRANSFER: "1"
 
@@ -47,4 +47,4 @@ jobs:
           retention-days: 30
 
       - name: Gate on eval thresholds
-        run: python eval/check_gate.py
+        run: $pythonLocation/bin/python eval/check_gate.py
