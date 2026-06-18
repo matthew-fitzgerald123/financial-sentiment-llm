@@ -186,12 +186,19 @@ def test_save_summary_required_keys(tmp_path):
         "ft_rougeL": 0.970,
         "label_accuracy_base": 0.82,
         "label_accuracy_finetuned": 0.95,
+        "ft_rougeL_gate_passed": True,
+        "label_accuracy_gate_passed": True,
     }
     out = tmp_path / "summary.json"
     eval_module.save_summary(str(out), summary)
 
     loaded = json.loads(out.read_text())
-    for key in ("ft_rougeL", "label_accuracy_finetuned"):
+    for key in (
+        "ft_rougeL",
+        "label_accuracy_finetuned",
+        "ft_rougeL_gate_passed",
+        "label_accuracy_gate_passed",
+    ):
         assert key in loaded, f"CI gate key '{key}' missing from summary"
 
 
@@ -293,3 +300,90 @@ def test_check_gate_custom_threshold():
 
     avg2, passed2 = eval_module.check_gate(_make_results([0.40, 0.45]), threshold=0.50)
     assert passed2 is False
+
+
+# ---------------------------------------------------------------------------
+# Gate flags written into summary dict
+# ---------------------------------------------------------------------------
+
+def _make_full_result(ft_rougeL, gt_label="positive", ft_label="positive"):
+    gt = f"Sentiment: {gt_label}. Ground truth."
+    ft = f"Sentiment: {ft_label}. Prediction."
+    return {
+        "ground_truth": gt,
+        "finetuned": ft,
+        "base_rouge1": 0.1,
+        "base_rougeL": 0.1,
+        "ft_rouge1": ft_rougeL,
+        "ft_rougeL": ft_rougeL,
+    }
+
+
+def test_label_accuracy_gate_passes_above_threshold():
+    results = [_make_full_result(0.97, "positive", "positive") for _ in range(5)]
+    ft_acc = eval_module.label_accuracy(results)
+    assert ft_acc >= eval_module.LABEL_ACC_GATE
+    assert ft_acc >= 0.80
+
+
+def test_label_accuracy_gate_fails_below_threshold():
+    correct = [_make_full_result(0.5, "positive", "positive") for _ in range(7)]
+    wrong = [_make_full_result(0.5, "positive", "negative") for _ in range(3)]
+    results = correct + wrong
+    ft_acc = eval_module.label_accuracy(results)
+    assert ft_acc < eval_module.LABEL_ACC_GATE
+
+
+def test_label_accuracy_gate_threshold_is_0_80():
+    assert eval_module.LABEL_ACC_GATE == pytest.approx(0.80)
+
+
+def test_summary_includes_ft_rougeL_gate_flag(tmp_path):
+    results = [_make_full_result(0.97)]
+    avgs = eval_module.compute_averages(results)
+    ft_acc = eval_module.label_accuracy(results)
+    summary = {
+        "ft_rougeL": avgs["ft_avg_rougeL"],
+        "label_accuracy_finetuned": ft_acc,
+        "ft_rougeL_gate_passed": avgs["ft_rougeL_gate_passed"],
+        "label_accuracy_gate_passed": ft_acc >= eval_module.LABEL_ACC_GATE,
+    }
+    out = tmp_path / "summary.json"
+    eval_module.save_summary(str(out), summary)
+    loaded = json.loads(out.read_text())
+    assert loaded["ft_rougeL_gate_passed"] is True
+    assert loaded["label_accuracy_gate_passed"] is True
+
+
+def test_summary_gate_flag_false_when_rougeL_low(tmp_path):
+    results = [_make_full_result(0.50)]
+    avgs = eval_module.compute_averages(results)
+    ft_acc = eval_module.label_accuracy(results)
+    summary = {
+        "ft_rougeL": avgs["ft_avg_rougeL"],
+        "label_accuracy_finetuned": ft_acc,
+        "ft_rougeL_gate_passed": avgs["ft_rougeL_gate_passed"],
+        "label_accuracy_gate_passed": ft_acc >= eval_module.LABEL_ACC_GATE,
+    }
+    out = tmp_path / "summary.json"
+    eval_module.save_summary(str(out), summary)
+    loaded = json.loads(out.read_text())
+    assert loaded["ft_rougeL_gate_passed"] is False
+
+
+def test_summary_label_accuracy_gate_false_when_accuracy_low(tmp_path):
+    correct = [_make_full_result(0.9, "positive", "positive") for _ in range(6)]
+    wrong = [_make_full_result(0.9, "positive", "negative") for _ in range(4)]
+    results = correct + wrong
+    avgs = eval_module.compute_averages(results)
+    ft_acc = eval_module.label_accuracy(results)
+    summary = {
+        "ft_rougeL": avgs["ft_avg_rougeL"],
+        "label_accuracy_finetuned": ft_acc,
+        "ft_rougeL_gate_passed": avgs["ft_rougeL_gate_passed"],
+        "label_accuracy_gate_passed": ft_acc >= eval_module.LABEL_ACC_GATE,
+    }
+    out = tmp_path / "summary.json"
+    eval_module.save_summary(str(out), summary)
+    loaded = json.loads(out.read_text())
+    assert loaded["label_accuracy_gate_passed"] is False
