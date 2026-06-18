@@ -25,6 +25,7 @@ SUMMARY_PATH = "./eval/summary.json"
 NUM_EXAMPLES = 50
 MAX_TOKENS = 128
 ROUGE_L_GATE = 0.85
+LABEL_ACC_GATE = 0.80
 
 
 def load_examples(path, n):
@@ -173,8 +174,10 @@ def main():
         "base_rougeL": avgs["base_avg_rougeL"],
         "ft_rouge1": avgs["ft_avg_rouge1"],
         "ft_rougeL": avgs["ft_avg_rougeL"],
+        "ft_rougeL_gate_passed": avgs["ft_rougeL_gate_passed"],
         "label_accuracy_base": base_acc,
         "label_accuracy_finetuned": ft_acc,
+        "label_accuracy_gate_passed": ft_acc >= LABEL_ACC_GATE,
     }
     save_summary(SUMMARY_PATH, summary)
 

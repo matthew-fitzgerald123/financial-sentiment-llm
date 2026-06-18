@@ -176,7 +176,7 @@ def test_save_summary_creates_parent_dir(tmp_path):
 
 
 def test_save_summary_required_keys(tmp_path):
-    """summary.json must contain the keys the CI gate reads."""
+    """summary.json must contain the metric and gate-passed keys."""
     summary = {
         "n_examples": 50,
         "data_path": "./data/valid.jsonl",
@@ -184,15 +184,94 @@ def test_save_summary_required_keys(tmp_path):
         "base_rougeL": 0.094,
         "ft_rouge1": 0.970,
         "ft_rougeL": 0.970,
+        "ft_rougeL_gate_passed": True,
         "label_accuracy_base": 0.82,
         "label_accuracy_finetuned": 0.95,
+        "label_accuracy_gate_passed": True,
     }
     out = tmp_path / "summary.json"
     eval_module.save_summary(str(out), summary)
 
     loaded = json.loads(out.read_text())
-    for key in ("ft_rougeL", "label_accuracy_finetuned"):
-        assert key in loaded, f"CI gate key '{key}' missing from summary"
+    for key in (
+        "ft_rougeL",
+        "label_accuracy_finetuned",
+        "ft_rougeL_gate_passed",
+        "label_accuracy_gate_passed",
+    ):
+        assert key in loaded, f"Required summary key '{key}' missing"
+
+
+# --- gate-passed flag tests ---
+
+def _make_summary(ft_rougeL, label_acc):
+    return {
+        "n_examples": 10,
+        "data_path": "./data/valid.jsonl",
+        "base_rouge1": 0.1,
+        "base_rougeL": 0.1,
+        "ft_rouge1": ft_rougeL,
+        "ft_rougeL": ft_rougeL,
+        "ft_rougeL_gate_passed": ft_rougeL >= eval_module.ROUGE_L_GATE,
+        "label_accuracy_base": 0.5,
+        "label_accuracy_finetuned": label_acc,
+        "label_accuracy_gate_passed": label_acc >= eval_module.LABEL_ACC_GATE,
+    }
+
+
+def test_gate_flags_are_booleans(tmp_path):
+    out = tmp_path / "summary.json"
+    eval_module.save_summary(str(out), _make_summary(0.97, 0.95))
+    loaded = json.loads(out.read_text())
+    assert isinstance(loaded["ft_rougeL_gate_passed"], bool)
+    assert isinstance(loaded["label_accuracy_gate_passed"], bool)
+
+
+def test_gate_flags_pass_when_above_thresholds(tmp_path):
+    out = tmp_path / "summary.json"
+    eval_module.save_summary(str(out), _make_summary(0.90, 0.90))
+    loaded = json.loads(out.read_text())
+    assert loaded["ft_rougeL_gate_passed"] is True
+    assert loaded["label_accuracy_gate_passed"] is True
+
+
+def test_gate_flags_fail_when_below_rougeL_threshold(tmp_path):
+    out = tmp_path / "summary.json"
+    eval_module.save_summary(str(out), _make_summary(0.80, 0.90))
+    loaded = json.loads(out.read_text())
+    assert loaded["ft_rougeL_gate_passed"] is False
+    assert loaded["label_accuracy_gate_passed"] is True
+
+
+def test_gate_flags_fail_when_below_label_acc_threshold(tmp_path):
+    out = tmp_path / "summary.json"
+    eval_module.save_summary(str(out), _make_summary(0.90, 0.70))
+    loaded = json.loads(out.read_text())
+    assert loaded["ft_rougeL_gate_passed"] is True
+    assert loaded["label_accuracy_gate_passed"] is False
+
+
+def test_gate_flags_both_fail_when_both_below_threshold(tmp_path):
+    out = tmp_path / "summary.json"
+    eval_module.save_summary(str(out), _make_summary(0.70, 0.60))
+    loaded = json.loads(out.read_text())
+    assert loaded["ft_rougeL_gate_passed"] is False
+    assert loaded["label_accuracy_gate_passed"] is False
+
+
+def test_gate_flags_pass_exactly_at_thresholds(tmp_path):
+    out = tmp_path / "summary.json"
+    eval_module.save_summary(
+        str(out),
+        _make_summary(eval_module.ROUGE_L_GATE, eval_module.LABEL_ACC_GATE),
+    )
+    loaded = json.loads(out.read_text())
+    assert loaded["ft_rougeL_gate_passed"] is True
+    assert loaded["label_accuracy_gate_passed"] is True
+
+
+def test_label_acc_gate_constant_is_0_80():
+    assert eval_module.LABEL_ACC_GATE == pytest.approx(0.80)
 
 
 # ---------------------------------------------------------------------------
