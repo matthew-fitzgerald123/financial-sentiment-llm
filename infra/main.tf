@@ -135,11 +135,7 @@ resource "aws_ecr_repository" "api" {
   image_scanning_configuration { scan_on_push = true }
 }
 
-# ---------- ECS ----------
-
-resource "aws_ecs_cluster" "main" {
-  name = "${var.project}-cluster"
-}
+# ---------- IAM: ECS task execution (pull images, write logs) ----------
 
 resource "aws_iam_role" "ecs_task_execution" {
   name = "${var.project}-ecs-exec-role"
@@ -159,10 +155,121 @@ resource "aws_iam_role_policy_attachment" "ecs_exec" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# ---------- IAM: EC2 instance role for ECS agent ----------
+
+resource "aws_iam_role" "ecs_instance" {
+  name = "${var.project}-ecs-instance-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_instance" {
+  role       = aws_iam_role.ecs_instance.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+}
+
+resource "aws_iam_instance_profile" "ecs" {
+  name = "${var.project}-ecs-instance-profile"
+  role = aws_iam_role.ecs_instance.name
+}
+
+# ---------- GPU AMI (ECS-optimized, Amazon Linux 2) ----------
+
+data "aws_ssm_parameter" "ecs_gpu_ami" {
+  name = "/aws/service/ecs/optimized-ami/amazon-linux-2/gpu/recommended/image_id"
+}
+
+# ---------- EC2 launch template for GPU instances ----------
+
+resource "aws_launch_template" "ecs_gpu" {
+  name_prefix   = "${var.project}-gpu-"
+  image_id      = data.aws_ssm_parameter.ecs_gpu_ami.value
+  instance_type = var.instance_type
+
+  iam_instance_profile { arn = aws_iam_instance_profile.ecs.arn }
+
+  vpc_security_group_ids = [aws_security_group.ecs_tasks.id]
+
+  # Register the instance with the ECS cluster on boot
+  user_data = base64encode(<<-EOF
+    #!/bin/bash
+    echo ECS_CLUSTER=${aws_ecs_cluster.main.name} >> /etc/ecs/ecs.config
+    echo ECS_ENABLE_GPU_SUPPORT=true >> /etc/ecs/ecs.config
+  EOF
+  )
+
+  tag_specifications {
+    resource_type = "instance"
+    tags          = { Name = "${var.project}-gpu-node" }
+  }
+}
+
+# ---------- Auto Scaling Group ----------
+
+resource "aws_autoscaling_group" "ecs_gpu" {
+  name                = "${var.project}-gpu-asg"
+  min_size            = 0
+  max_size            = var.desired_count
+  desired_capacity    = var.desired_count
+  vpc_zone_identifier = aws_subnet.public[*].id
+
+  launch_template {
+    id      = aws_launch_template.ecs_gpu.id
+    version = "$Latest"
+  }
+
+  tag {
+    key                 = "AmazonECSManaged"
+    value               = ""
+    propagate_at_launch = true
+  }
+}
+
+# ---------- ECS capacity provider (EC2 GPU) ----------
+
+resource "aws_ecs_capacity_provider" "gpu" {
+  name = "${var.project}-gpu-cp"
+
+  auto_scaling_group_provider {
+    auto_scaling_group_arn = aws_autoscaling_group.ecs_gpu.arn
+
+    managed_scaling {
+      status                    = "ENABLED"
+      target_capacity           = 100
+      minimum_scaling_step_size = 1
+      maximum_scaling_step_size = var.desired_count
+    }
+  }
+}
+
+# ---------- ECS ----------
+
+resource "aws_ecs_cluster" "main" {
+  name = "${var.project}-cluster"
+}
+
+resource "aws_ecs_cluster_capacity_providers" "main" {
+  cluster_name       = aws_ecs_cluster.main.name
+  capacity_providers = [aws_ecs_capacity_provider.gpu.name]
+
+  default_capacity_provider_strategy {
+    capacity_provider = aws_ecs_capacity_provider.gpu.name
+    weight            = 1
+    base              = 1
+  }
+}
+
 resource "aws_ecs_task_definition" "api" {
   family                   = var.project
   network_mode             = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
+  requires_compatibilities = ["EC2"]
   cpu                      = var.task_cpu
   memory                   = var.task_memory
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
@@ -173,6 +280,9 @@ resource "aws_ecs_task_definition" "api" {
     portMappings = [{ containerPort = 8080, protocol = "tcp" }]
     environment = [
       { name = "MODEL_VERSION", value = var.model_version }
+    ]
+    resourceRequirements = [
+      { type = "GPU", value = tostring(var.gpu_count) }
     ]
     logConfiguration = {
       logDriver = "awslogs"
@@ -195,7 +305,12 @@ resource "aws_ecs_service" "api" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.api.arn
   desired_count   = var.desired_count
-  launch_type     = "FARGATE"
+
+  capacity_provider_strategy {
+    capacity_provider = aws_ecs_capacity_provider.gpu.name
+    weight            = 1
+    base              = 1
+  }
 
   network_configuration {
     subnets          = aws_subnet.public[*].id
@@ -209,5 +324,5 @@ resource "aws_ecs_service" "api" {
     container_port   = 8080
   }
 
-  depends_on = [aws_lb_listener.http]
+  depends_on = [aws_lb_listener.http, aws_ecs_cluster_capacity_providers.main]
 }
