@@ -1,4 +1,4 @@
-.PHONY: install prepare train eval eval-ood mlflow serve serve-ecs serve-vllm benchmark test
+.PHONY: install prepare train eval eval-ood mlflow serve serve-ecs serve-vllm merge benchmark test
 
 install:
 	pip install -r requirements.txt
@@ -33,6 +33,10 @@ serve-vllm:
 
 test:
 	python -m pytest tests/ -v
+
+# Merge LoRA adapter into base weights and re-quantize (requires trained adapter)
+merge:
+	python scripts/merge.py --adapter ./mistral-finetuned --output ./mistral-merged
 
 # Benchmark LoRA scale vs latency/quality (requires trained adapter)
 benchmark:
