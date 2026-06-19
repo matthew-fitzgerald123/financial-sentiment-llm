@@ -1,4 +1,4 @@
-.PHONY: install prepare train eval eval-ood mlflow serve serve-ecs serve-vllm benchmark test
+.PHONY: install prepare train eval eval-ood mlflow serve serve-ecs serve-vllm docker-build docker-build-vllm docker-run-vllm benchmark test
 
 install:
 	pip install -r requirements.txt
@@ -33,6 +33,18 @@ serve-vllm:
 
 test:
 	python -m pytest tests/ -v
+
+# CPU/ECS image (transformers + PEFT backend)
+docker-build:
+	docker build -t financial-sentiment-llm:cpu .
+
+# GPU image (vLLM backend, requires CUDA runtime on the host)
+docker-build-vllm:
+	docker build -f Dockerfile.vllm -t financial-sentiment-llm:gpu .
+
+# Smoke-test the GPU image locally using MOCK_MODE (no GPU required)
+docker-run-vllm:
+	docker run --rm -p 8080:8080 -e MOCK_MODE=true financial-sentiment-llm:gpu
 
 # Benchmark LoRA scale vs latency/quality (requires trained adapter)
 benchmark:
