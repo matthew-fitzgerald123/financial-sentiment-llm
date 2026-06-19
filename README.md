@@ -37,15 +37,17 @@ flowchart TD
     subgraph Serve["Serving"]
         ADPT --> LC[Local: app/main.py\nmlx-lm + SSE]
         ADPT --> DC[Docker: app/main_ecs.py\ntransformers + PEFT]
+        ADPT --> VL[ECS GPU: app/main_vllm.py\nvLLM AsyncEngine + LoRA]
     end
 
     subgraph AWS["AWS (Terraform)"]
-        ECR[ECR Repository] --> ECS[ECS Fargate\n2 vCPU / 8 GB]
+        ECR[ECR Repository] --> ECS[ECS EC2 g4dn.xlarge\nNVIDIA T4 16 GB VRAM]
         ALB[Application\nLoad Balancer] --> ECS
         CW[CloudWatch\nLogs] --> ECS
     end
 
     DC --> ECR
+    VL --> ECR
     Client([Client]) -->|HTTP /predict\n/predict/stream| ALB
     Client -->|local dev| LC
 ```
@@ -57,7 +59,7 @@ flowchart TD
 - **Dataset**: [nickmuchi/financial-classification](https://huggingface.co/datasets/nickmuchi/financial-classification) (4,551 train / 506 test)
 - **Tracking**: MLflow
 - **Serving**: FastAPI + uvicorn
-- **Infra**: Docker · AWS ECS Fargate · Terraform · GitHub Actions
+- **Infra**: Docker · AWS ECS EC2 (g4dn.xlarge, NVIDIA T4) · Terraform · GitHub Actions
 
 ## Model Card
 
@@ -97,8 +99,11 @@ make test
 # Benchmark LoRA scale vs latency/quality (requires trained adapter)
 make benchmark
 
-# Serve locally at http://localhost:8080
+# Serve locally at http://localhost:8080 (Apple Silicon / mlx-lm)
 make serve
+
+# Serve with vLLM GPU backend (requires CUDA; use MOCK_MODE=true without a GPU)
+MOCK_MODE=true make serve-vllm
 ```
 
 ## Inference
@@ -177,4 +182,4 @@ Full per-example results in `eval/results.json` after running `make eval`. Aggre
 - **Richer output**: ✓ response now includes `label` and `explanation` fields parsed from structured model output
 - **Harder eval**: ✓ `data/ood_sample.jsonl` bundles 10 earnings-call / 10-K examples; `make eval-ood` runs the full OOD evaluation in one command
 - **Merge + requantize**: merge the LoRA adapter into the base weights and re-quantize to reduce inference overhead
-- **GPU serving**: right-size the ECS task for a GPU instance (g4dn.xlarge) and switch to vLLM for production throughput
+- **GPU serving**: ✓ `app/main_vllm.py` serves via `vllm.AsyncLLMEngine` with LoRA support; Terraform switches the ECS cluster from Fargate to an EC2 Auto Scaling Group of `g4dn.xlarge` GPU instances using the ECS-optimized GPU AMI; run locally with `make serve-vllm` (set `MOCK_MODE=true` without a GPU)
