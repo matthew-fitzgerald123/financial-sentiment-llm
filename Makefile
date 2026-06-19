@@ -1,4 +1,4 @@
-.PHONY: install prepare train eval eval-ood mlflow serve serve-ecs benchmark test
+.PHONY: install prepare train eval eval-ood mlflow serve serve-ecs serve-vllm benchmark test
 
 install:
 	pip install -r requirements.txt
@@ -26,6 +26,10 @@ serve:
 # ECS-compatible — transformers + PEFT backend
 serve-ecs:
 	MOCK_MODE=true uvicorn app.main_ecs:app --host 127.0.0.1 --port 8080 --reload
+
+# GPU serving — vLLM backend (requires CUDA; use MOCK_MODE=true for local smoke-test)
+serve-vllm:
+	uvicorn app.main_vllm:app --host 127.0.0.1 --port 8080 --reload
 
 test:
 	python -m pytest tests/ -v
