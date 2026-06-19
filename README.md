@@ -177,4 +177,4 @@ Full per-example results in `eval/results.json` after running `make eval`. Aggre
 - **Richer output**: ✓ response now includes `label` and `explanation` fields parsed from structured model output
 - **Harder eval**: ✓ `data/ood_sample.jsonl` bundles 10 earnings-call / 10-K examples; `make eval-ood` runs the full OOD evaluation in one command
 - **Merge + requantize**: merge the LoRA adapter into the base weights and re-quantize to reduce inference overhead
-- **GPU serving**: right-size the ECS task for a GPU instance (g4dn.xlarge) and switch to vLLM for production throughput
+- **GPU serving**: ✓ `app/main_vllm.py` serves via `vllm.AsyncLLMEngine` with LoRA support; Terraform switches the ECS cluster from Fargate to an EC2 Auto Scaling Group of `g4dn.xlarge` GPU instances using the ECS-optimized GPU AMI; run locally with `make serve-vllm` (set `MOCK_MODE=true` without a GPU)

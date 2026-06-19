@@ -33,3 +33,15 @@ variable "desired_count" {
   type        = number
   default     = 1
 }
+
+variable "instance_type" {
+  description = "EC2 instance type for the GPU ECS cluster (must have NVIDIA GPU for vLLM)"
+  type        = string
+  default     = "g4dn.xlarge"
+}
+
+variable "gpu_count" {
+  description = "Number of GPUs to reserve per ECS task"
+  type        = number
+  default     = 1
+}
