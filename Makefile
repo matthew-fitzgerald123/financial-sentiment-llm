@@ -1,4 +1,4 @@
-.PHONY: install prepare train eval eval-ood mlflow serve serve-ecs merge benchmark test
+.PHONY: install prepare train eval eval-ood mlflow serve serve-ecs serve-merged merge benchmark test
 
 install:
 	pip install -r requirements.txt
@@ -22,6 +22,10 @@ mlflow:
 # Local dev — Apple Silicon, mlx-lm backend
 serve:
 	uvicorn app.main:app --host 127.0.0.1 --port 8080 --reload
+
+# Merged model — no adapter overhead (run 'make merge' first)
+serve-merged:
+	MERGED_MODEL_PATH=./mistral-merged uvicorn app.main:app --host 127.0.0.1 --port 8080 --reload
 
 # ECS-compatible — transformers + PEFT backend
 serve-ecs:
