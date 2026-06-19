@@ -94,6 +94,9 @@ make eval-ood
 # Run test suite (no model weights required)
 make test
 
+# Merge LoRA adapter into base weights and re-quantize (requires trained adapter)
+make merge
+
 # Benchmark LoRA scale vs latency/quality (requires trained adapter)
 make benchmark
 
@@ -176,5 +179,5 @@ Full per-example results in `eval/results.json` after running `make eval`. Aggre
 
 - **Richer output**: ✓ response now includes `label` and `explanation` fields parsed from structured model output
 - **Harder eval**: ✓ `data/ood_sample.jsonl` bundles 10 earnings-call / 10-K examples; `make eval-ood` runs the full OOD evaluation in one command
-- **Merge + requantize**: merge the LoRA adapter into the base weights and re-quantize to reduce inference overhead
+- **Merge + requantize**: ✓ `scripts/merge.py` fuses the LoRA adapter into the base weights and re-quantizes (`make merge`), eliminating the adapter-loading step at serve time
 - **GPU serving**: right-size the ECS task for a GPU instance (g4dn.xlarge) and switch to vLLM for production throughput
