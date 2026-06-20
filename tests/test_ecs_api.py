@@ -141,3 +141,43 @@ def test_predict_stream_token_format(client):
     payload = json.loads(lines[0].removeprefix("data: "))
     assert "token" in payload
     assert "model_version" in payload
+
+
+def test_predict_response_has_label_and_explanation(client):
+    """/predict response must include the structured label and explanation fields."""
+    r = client.post(
+        "/predict",
+        json={"question": "Classify the sentiment: 'Operating margins expanded.'"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert "label" in data
+    assert "explanation" in data
+    assert data["label"] == "positive"
+    assert "favorable" in data["explanation"]
+
+
+def test_predict_503_when_pipeline_none(monkeypatch):
+    """/predict must return 503 if the model pipeline was never loaded."""
+    import app.main_ecs as m
+    from app.main_ecs import app as ecs_app
+    monkeypatch.setattr(m, "pipeline", None)
+    c = TestClient(ecs_app, raise_server_exceptions=False)
+    r = c.post("/predict", json={"question": "Classify this."})
+    assert r.status_code == 503
+
+
+def test_predict_stream_503_when_pipeline_none(monkeypatch):
+    """/predict/stream must return 503 if the model pipeline was never loaded."""
+    import app.main_ecs as m
+    from app.main_ecs import app as ecs_app
+    monkeypatch.setattr(m, "pipeline", None)
+    c = TestClient(ecs_app, raise_server_exceptions=False)
+    r = c.post("/predict/stream", json={"question": "Classify this."})
+    assert r.status_code == 503
+
+
+def test_predict_stream_missing_question(client):
+    """Missing question field on /predict/stream must be rejected with 422."""
+    r = client.post("/predict/stream", json={})
+    assert r.status_code == 422
