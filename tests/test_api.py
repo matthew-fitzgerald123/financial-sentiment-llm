@@ -214,3 +214,34 @@ def test_merged_path_not_used_when_dir_missing(tmp_path):
     # load() must be called with model_id + adapter_path kwargs, not the missing merged path
     call_args = mock_load.call_args
     assert call_args[0][0] != missing_dir
+
+
+# ---------------------------------------------------------------------------
+# 503 guard and health model_version
+# ---------------------------------------------------------------------------
+
+def test_health_has_model_version(client):
+    """/health response must include model_version."""
+    r = client.get("/health")
+    assert r.status_code == 200
+    assert "model_version" in r.json()
+
+
+def test_predict_503_when_model_none(monkeypatch):
+    """/predict must return 503 if the model was never loaded."""
+    import app.main as m
+    from app.main import app as mlx_app
+    monkeypatch.setattr(m, "model", None)
+    c = TestClient(mlx_app, raise_server_exceptions=False)
+    r = c.post("/predict", json={"question": "Classify this."})
+    assert r.status_code == 503
+
+
+def test_predict_stream_503_when_model_none(monkeypatch):
+    """/predict/stream must return 503 if the model was never loaded."""
+    import app.main as m
+    from app.main import app as mlx_app
+    monkeypatch.setattr(m, "model", None)
+    c = TestClient(mlx_app, raise_server_exceptions=False)
+    r = c.post("/predict/stream", json={"question": "Classify this."})
+    assert r.status_code == 503
