@@ -216,6 +216,7 @@ def test_merged_path_not_used_when_dir_missing(tmp_path):
     assert call_args[0][0] != missing_dir
 
 
+
 # ---------------------------------------------------------------------------
 # 503 guard and health model_version
 # ---------------------------------------------------------------------------
