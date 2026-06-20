@@ -105,6 +105,9 @@ make benchmark
 # Serve locally at http://localhost:8080 (Apple Silicon / mlx-lm)
 make serve
 
+# Serve merged model (no adapter overhead) — run 'make merge' first
+make serve-merged
+
 # Serve with vLLM GPU backend (requires CUDA; use MOCK_MODE=true without a GPU)
 MOCK_MODE=true make serve-vllm
 ```
@@ -121,7 +124,8 @@ curl http://localhost:8080/model/info
   "model_id": "mistralai/Mistral-7B-Instruct-v0.3",
   "adapter_path": "./mistral-finetuned",
   "model_version": "mistral-7b-finance-mlx-lora-v1",
-  "model_loaded": true
+  "model_loaded": true,
+  "merged": false
 }
 ```
 
@@ -184,5 +188,5 @@ Full per-example results in `eval/results.json` after running `make eval`. Aggre
 
 - **Richer output**: ✓ response now includes `label` and `explanation` fields parsed from structured model output
 - **Harder eval**: ✓ `data/ood_sample.jsonl` bundles 10 earnings-call / 10-K examples; `make eval-ood` runs the full OOD evaluation in one command
-- **Merge + requantize**: ✓ `scripts/merge.py` fuses the LoRA adapter into the base weights and re-quantizes (`make merge`), eliminating the adapter-loading step at serve time
+- **Merge + requantize**: ✓ `scripts/merge.py` fuses the LoRA adapter into the base weights and re-quantizes (`make merge`); `make serve-merged` loads the fused model directly via `MERGED_MODEL_PATH` with no adapter overhead, and `/model/info` reports `merged: true` in that mode
 - **GPU serving**: ✓ `app/main_vllm.py` serves via `vllm.AsyncLLMEngine` with LoRA support; Terraform switches the ECS cluster from Fargate to an EC2 Auto Scaling Group of `g4dn.xlarge` GPU instances using the ECS-optimized GPU AMI; run locally with `make serve-vllm` (set `MOCK_MODE=true` without a GPU)

@@ -18,6 +18,7 @@ from app.utils import parse_sentiment_explanation, parse_sentiment_label
 
 MODEL_ID = os.getenv("BASE_MODEL_ID", "mlx-community/Mistral-7B-Instruct-v0.3-4bit")
 ADAPTER_PATH = os.getenv("ADAPTER_PATH", "./mistral-finetuned")
+MERGED_MODEL_PATH = os.getenv("MERGED_MODEL_PATH", "")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "mistral-7b-finance-mlx-lora-v1")
 
 model = None
@@ -28,10 +29,14 @@ executor = ThreadPoolExecutor(max_workers=1)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model, tokenizer
-    adapter = ADAPTER_PATH if Path(ADAPTER_PATH).exists() else None
-    if adapter is None:
-        print(f"No adapter found at {ADAPTER_PATH!r}, loading base model only")
-    model, tokenizer = load(MODEL_ID, adapter_path=adapter)
+    if MERGED_MODEL_PATH and Path(MERGED_MODEL_PATH).exists():
+        print(f"Loading merged model from {MERGED_MODEL_PATH!r} (no adapter overhead)")
+        model, tokenizer = load(MERGED_MODEL_PATH)
+    else:
+        adapter = ADAPTER_PATH if Path(ADAPTER_PATH).exists() else None
+        if adapter is None:
+            print(f"No adapter found at {ADAPTER_PATH!r}, loading base model only")
+        model, tokenizer = load(MODEL_ID, adapter_path=adapter)
     yield
 
 
@@ -106,11 +111,13 @@ async def predict_stream(query: Query):
 
 @app.get("/model/info")
 async def model_info():
+    _merged = bool(MERGED_MODEL_PATH and Path(MERGED_MODEL_PATH).exists())
     return {
-        "model_id":      MODEL_ID,
-        "adapter_path":  ADAPTER_PATH,
+        "model_id":      MERGED_MODEL_PATH if _merged else MODEL_ID,
+        "adapter_path":  None if _merged else ADAPTER_PATH,
         "model_version": MODEL_VERSION,
         "model_loaded":  model is not None,
+        "merged":        _merged,
     }
 
 
