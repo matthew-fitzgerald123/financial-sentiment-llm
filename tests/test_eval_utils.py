@@ -4,6 +4,7 @@ Tests for eval scoring helpers (no model loading required).
 import json
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 from rouge_score import rouge_scorer
@@ -293,3 +294,72 @@ def test_check_gate_custom_threshold():
 
     avg2, passed2 = eval_module.check_gate(_make_results([0.40, 0.45]), threshold=0.50)
     assert passed2 is False
+
+
+# ---------------------------------------------------------------------------
+# run_generate
+# ---------------------------------------------------------------------------
+
+def test_run_generate_returns_generate_output():
+    mock_model = MagicMock()
+    mock_tokenizer = MagicMock()
+    with patch.object(eval_module, "generate", return_value="Sentiment: positive.") as mock_gen:
+        result = eval_module.run_generate(mock_model, mock_tokenizer, "What is the sentiment?")
+    assert result == "Sentiment: positive."
+
+
+def test_run_generate_wraps_question_in_inst_tags():
+    mock_model = MagicMock()
+    mock_tokenizer = MagicMock()
+    with patch.object(eval_module, "generate", return_value="ok") as mock_gen:
+        eval_module.run_generate(mock_model, mock_tokenizer, "Revenue fell 10%.")
+    prompt = mock_gen.call_args.kwargs["prompt"]
+    assert "[INST]" in prompt
+    assert "[/INST]" in prompt
+    assert "Revenue fell 10%." in prompt
+
+
+def test_run_generate_prompt_starts_with_bos():
+    mock_model = MagicMock()
+    mock_tokenizer = MagicMock()
+    with patch.object(eval_module, "generate", return_value="ok") as mock_gen:
+        eval_module.run_generate(mock_model, mock_tokenizer, "Any question.")
+    prompt = mock_gen.call_args.kwargs["prompt"]
+    assert prompt.startswith("<s>")
+
+
+def test_run_generate_question_between_inst_tags():
+    question = "Classify the sentiment: 'Margins expanded.'"
+    mock_model = MagicMock()
+    mock_tokenizer = MagicMock()
+    with patch.object(eval_module, "generate", return_value="ok") as mock_gen:
+        eval_module.run_generate(mock_model, mock_tokenizer, question)
+    prompt = mock_gen.call_args.kwargs["prompt"]
+    inner = prompt.split("[INST]")[1].split("[/INST]")[0]
+    assert question in inner
+
+
+def test_run_generate_forwards_max_tokens():
+    mock_model = MagicMock()
+    mock_tokenizer = MagicMock()
+    with patch.object(eval_module, "generate", return_value="ok") as mock_gen:
+        eval_module.run_generate(mock_model, mock_tokenizer, "question", max_tokens=64)
+    assert mock_gen.call_args.kwargs["max_tokens"] == 64
+
+
+def test_run_generate_uses_default_max_tokens():
+    mock_model = MagicMock()
+    mock_tokenizer = MagicMock()
+    with patch.object(eval_module, "generate", return_value="ok") as mock_gen:
+        eval_module.run_generate(mock_model, mock_tokenizer, "question")
+    assert mock_gen.call_args.kwargs["max_tokens"] == eval_module.MAX_TOKENS
+
+
+def test_run_generate_passes_model_and_tokenizer():
+    mock_model = MagicMock()
+    mock_tokenizer = MagicMock()
+    with patch.object(eval_module, "generate", return_value="ok") as mock_gen:
+        eval_module.run_generate(mock_model, mock_tokenizer, "question")
+    args = mock_gen.call_args.args
+    assert args[0] is mock_model
+    assert args[1] is mock_tokenizer
