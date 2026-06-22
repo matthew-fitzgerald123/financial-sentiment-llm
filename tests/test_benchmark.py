@@ -259,3 +259,148 @@ def test_run_benchmark_median_of_odd_count():
         result = _bench.run_benchmark(model, tokenizer, examples, max_tokens=64)
 
     assert isinstance(result["tps_median"], float)
+
+
+# ---------------------------------------------------------------------------
+# main() — orchestration (model loading and file I/O are mocked)
+# ---------------------------------------------------------------------------
+
+_MOCK_STATS = {"tps_median": 50.0, "tps_mean": 48.0, "rougeL_mean": 0.95}
+_MAIN_EXAMPLES = [_make_example()]
+
+
+def _run_main(results_p, extra_argv=None):
+    argv = ["quant_bench.py"] + (extra_argv or [])
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES),
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale"),
+        patch.object(_bench, "RESULTS_PATH", str(results_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+
+
+def test_main_writes_results_json(tmp_path):
+    """main() must write bench_results.json at RESULTS_PATH."""
+    results_p = tmp_path / "bench_results.json"
+    _run_main(results_p)
+    assert results_p.exists()
+
+
+def test_main_results_json_is_valid_json(tmp_path):
+    """The results file must contain valid JSON."""
+    results_p = tmp_path / "bench_results.json"
+    _run_main(results_p)
+    data = json.loads(results_p.read_text())
+    assert isinstance(data, list)
+
+
+def test_main_results_include_baseline_and_sweep(tmp_path):
+    """Results must have one baseline entry plus one per SCALE_MULTIPLIER."""
+    results_p = tmp_path / "bench_results.json"
+    _run_main(results_p)
+    results = json.loads(results_p.read_text())
+    assert len(results) == 1 + len(_bench.SCALE_MULTIPLIERS)
+
+
+def test_main_baseline_entry_has_none_scale(tmp_path):
+    """The first result entry (baseline, no adapter) must have scale=None."""
+    results_p = tmp_path / "bench_results.json"
+    _run_main(results_p)
+    results = json.loads(results_p.read_text())
+    assert results[0]["scale"] is None
+
+
+def test_main_sweep_entries_have_numeric_scale(tmp_path):
+    """All sweep entries after the baseline must have a numeric scale."""
+    results_p = tmp_path / "bench_results.json"
+    _run_main(results_p)
+    results = json.loads(results_p.read_text())
+    for entry in results[1:]:
+        assert isinstance(entry["scale"], (int, float)), (
+            f"Expected numeric scale, got {entry['scale']!r}"
+        )
+
+
+def test_main_each_result_has_required_keys(tmp_path):
+    """Every result entry must have config, scale, tps_median, tps_mean, rougeL_mean."""
+    results_p = tmp_path / "bench_results.json"
+    _run_main(results_p)
+    results = json.loads(results_p.read_text())
+    for entry in results:
+        for key in ("config", "scale", "tps_median", "tps_mean", "rougeL_mean"):
+            assert key in entry, f"Result entry missing key: {key!r}"
+
+
+def test_main_calls_restore_adapter_scale_per_multiplier(tmp_path):
+    """restore_adapter_scale must be called exactly once per SCALE_MULTIPLIER."""
+    results_p = tmp_path / "bench_results.json"
+    argv = ["quant_bench.py"]
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES),
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale") as mock_restore,
+        patch.object(_bench, "RESULTS_PATH", str(results_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+    assert mock_restore.call_count == len(_bench.SCALE_MULTIPLIERS)
+
+
+def test_main_calls_load_for_baseline_and_each_sweep(tmp_path):
+    """load() must be called once for the baseline and once per sweep config."""
+    results_p = tmp_path / "bench_results.json"
+    argv = ["quant_bench.py"]
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES),
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())) as mock_load,
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale"),
+        patch.object(_bench, "RESULTS_PATH", str(results_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+    assert mock_load.call_count == 1 + len(_bench.SCALE_MULTIPLIERS)
+
+
+def test_main_baseline_load_has_no_adapter(tmp_path):
+    """The baseline load() call must NOT pass an adapter_path."""
+    results_p = tmp_path / "bench_results.json"
+    argv = ["quant_bench.py"]
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES),
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())) as mock_load,
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale"),
+        patch.object(_bench, "RESULTS_PATH", str(results_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+    baseline_call = mock_load.call_args_list[0]
+    assert baseline_call.kwargs.get("adapter_path") is None
+
+
+def test_main_sweep_loads_use_adapter_path(tmp_path):
+    """Each sweep load() call must pass adapter_path=ADAPTER_PATH."""
+    results_p = tmp_path / "bench_results.json"
+    argv = ["quant_bench.py"]
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES),
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())) as mock_load,
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale"),
+        patch.object(_bench, "RESULTS_PATH", str(results_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+    sweep_calls = mock_load.call_args_list[1:]
+    for call in sweep_calls:
+        assert call.kwargs.get("adapter_path") == _bench.ADAPTER_PATH
