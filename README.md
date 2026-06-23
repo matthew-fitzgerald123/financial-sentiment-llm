@@ -180,6 +180,9 @@ python eval/eval.py --data /path/to/ood.jsonl --n 100
 
 # Custom adapter path
 python eval/eval.py --adapter /path/to/my-adapter --n 50
+
+# Skip the ROUGE-L exit gate (informational / OOD runs where high variance is expected)
+python eval/eval.py --data data/ood_sample.jsonl --n 10 --no-gate
 ```
 
 Full per-example results in `eval/results.json` after running `make eval`. Aggregate metrics (ROUGE-1, ROUGE-L, label accuracy for both models) are saved to `eval/summary.json` and read by the CI gate. All metrics and the gate result are also logged to the MLflow experiment `mistral-finance-mlx-lora`.
