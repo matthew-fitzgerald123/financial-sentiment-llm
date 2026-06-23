@@ -67,3 +67,17 @@ jobs:
               sys.exit(1)
           print("PASS")
           EOF
+
+      - name: Run OOD evaluation (informational)
+        run: python eval/eval.py --data data/ood_sample.jsonl --n 10 --no-gate
+        env:
+          HF_HUB_ENABLE_HF_TRANSFER: "1"
+
+      - name: Upload OOD eval results
+        uses: actions/upload-artifact@v4
+        with:
+          name: ood-eval-results-${{ github.sha }}
+          path: |
+            eval/results.json
+            eval/summary.json
+          retention-days: 30

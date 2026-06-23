@@ -117,6 +117,12 @@ def main():
     parser.add_argument("--n", type=int, default=NUM_EXAMPLES, help="Number of examples")
     parser.add_argument("--max-tokens", type=int, default=MAX_TOKENS, dest="max_tokens")
     parser.add_argument("--adapter", default=ADAPTER_PATH, help="LoRA adapter path")
+    parser.add_argument(
+        "--no-gate",
+        action="store_true",
+        dest="no_gate",
+        help="Skip the ROUGE-L exit gate (for informational / OOD runs)",
+    )
     args = parser.parse_args()
 
     examples = load_examples(args.data, args.n)
@@ -213,7 +219,9 @@ def main():
     label_passed = ft_acc >= LABEL_ACCURACY_THRESHOLD
     print(f"\nROUGE-L gate       (>= {ROUGE_L_THRESHOLD}): avg={avg_rougeL:.3f} {'PASS' if rouge_passed else 'FAIL'}")
     print(f"Label accuracy gate (>= {LABEL_ACCURACY_THRESHOLD}): {ft_acc:.3f} {'PASS' if label_passed else 'FAIL'}")
-    if not rouge_passed or not label_passed:
+    if args.no_gate:
+        print("(gate skipped via --no-gate)")
+    elif not rouge_passed or not label_passed:
         import sys
         sys.exit(1)
 

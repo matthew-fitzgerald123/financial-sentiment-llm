@@ -408,6 +408,78 @@ def test_main_passes_adapter_arg_to_load(data_file, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# --no-gate flag
+# ---------------------------------------------------------------------------
+
+
+def test_no_gate_skips_exit_on_failing_rougeL(data_file, tmp_path):
+    """--no-gate must prevent sys.exit(1) even when ROUGE-L is below the threshold."""
+    results_p = str(tmp_path / "results.json")
+    summary_p = str(tmp_path / "summary.json")
+    # Junk output gives ROUGE-L ≈ 0.0 — gate would normally fail
+    with (
+        patch.object(_eval, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_eval, "generate", return_value=_JUNK),
+        patch.object(_eval, "RESULTS_PATH", results_p),
+        patch.object(_eval, "SUMMARY_PATH", summary_p),
+        patch("sys.argv", ["eval.py", "--data", data_file, "--n", "1", "--no-gate"]),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
+    ):
+        _eval.main()  # must not raise SystemExit
+
+
+def test_no_gate_still_writes_results_and_summary(data_file, tmp_path):
+    """--no-gate must still write both output files."""
+    results_p = str(tmp_path / "results.json")
+    summary_p = str(tmp_path / "summary.json")
+    with (
+        patch.object(_eval, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_eval, "generate", return_value=_JUNK),
+        patch.object(_eval, "RESULTS_PATH", results_p),
+        patch.object(_eval, "SUMMARY_PATH", summary_p),
+        patch("sys.argv", ["eval.py", "--data", data_file, "--n", "1", "--no-gate"]),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
+    ):
+        _eval.main()
+
+    assert Path(results_p).exists()
+    assert Path(summary_p).exists()
+
+
+def test_gate_still_exits_without_no_gate_flag(data_file, tmp_path):
+    """Without --no-gate, sys.exit(1) must still be called when ROUGE-L fails."""
+    results_p = str(tmp_path / "results.json")
+    summary_p = str(tmp_path / "summary.json")
+    with (
+        patch.object(_eval, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_eval, "generate", return_value=_JUNK),
+        patch.object(_eval, "RESULTS_PATH", results_p),
+        patch.object(_eval, "SUMMARY_PATH", summary_p),
+        patch("sys.argv", ["eval.py", "--data", data_file, "--n", "1"]),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
+    ):
+        with pytest.raises(SystemExit) as exc_info:
+            _eval.main()
+
+    assert exc_info.value.code == 1
+
+
+# ---------------------------------------------------------------------------
 # Label accuracy gate
 # ---------------------------------------------------------------------------
 
