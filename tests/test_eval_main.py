@@ -28,6 +28,10 @@ _SAMPLE_TEXT = f"<s>[INST] Classify the sentiment: 'Revenue fell 8%.' [/INST]{_G
 
 _JUNK = "xyz abc def completely unrelated output"
 
+# Same structure and wording as _GT but with the wrong label — ROUGE-L will be
+# high (> 0.85) because most tokens match, but label accuracy will be 0.
+_WRONG_LABEL = "Sentiment: positive. This statement reflects unfavorable financial conditions."
+
 
 @pytest.fixture()
 def data_file(tmp_path):
@@ -407,8 +411,6 @@ def test_main_passes_adapter_arg_to_load(data_file, tmp_path):
 # --no-gate flag
 # ---------------------------------------------------------------------------
 
-_JUNK = "xyz abc def completely unrelated output"
-
 
 def test_no_gate_skips_exit_on_failing_rougeL(data_file, tmp_path):
     """--no-gate must prevent sys.exit(1) even when ROUGE-L is below the threshold."""
@@ -475,3 +477,81 @@ def test_gate_still_exits_without_no_gate_flag(data_file, tmp_path):
             _eval.main()
 
     assert exc_info.value.code == 1
+
+
+# ---------------------------------------------------------------------------
+# Label accuracy gate
+# ---------------------------------------------------------------------------
+
+def test_main_gate_exits_when_label_accuracy_below_threshold(data_file, tmp_path):
+    """main() must call sys.exit(1) when label accuracy < 0.80, even if ROUGE-L passes."""
+    results_p = str(tmp_path / "results.json")
+    summary_p = str(tmp_path / "summary.json")
+    # _WRONG_LABEL has the same wording as _GT except for the sentiment token, so
+    # ROUGE-L is > 0.85 (gate passes) while label accuracy is 0.0 (gate fails).
+    with (
+        patch.object(_eval, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_eval, "generate", return_value=_WRONG_LABEL),
+        patch.object(_eval, "RESULTS_PATH", results_p),
+        patch.object(_eval, "SUMMARY_PATH", summary_p),
+        patch("sys.argv", ["eval.py", "--data", data_file, "--n", "1"]),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
+    ):
+        with pytest.raises(SystemExit) as exc_info:
+            _eval.main()
+
+    assert exc_info.value.code == 1
+
+
+def test_main_gate_exits_code_1_not_zero_on_label_accuracy_failure(data_file, tmp_path):
+    """Exit code must be 1 (not 0) when the label accuracy gate fails."""
+    results_p = str(tmp_path / "results.json")
+    summary_p = str(tmp_path / "summary.json")
+    with (
+        patch.object(_eval, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_eval, "generate", return_value=_WRONG_LABEL),
+        patch.object(_eval, "RESULTS_PATH", results_p),
+        patch.object(_eval, "SUMMARY_PATH", summary_p),
+        patch("sys.argv", ["eval.py", "--data", data_file, "--n", "1"]),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
+    ):
+        with pytest.raises(SystemExit) as exc_info:
+            _eval.main()
+
+    assert exc_info.value.code != 0
+
+
+def test_main_gate_does_not_exit_when_both_thresholds_pass(data_file, tmp_path):
+    """main() must not call sys.exit when ROUGE-L >= 0.85 and label accuracy >= 0.80."""
+    results_p = str(tmp_path / "results.json")
+    summary_p = str(tmp_path / "summary.json")
+    # Exact ground-truth output → ROUGE-L = 1.0, label accuracy = 1.0
+    with (
+        patch.object(_eval, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_eval, "generate", return_value=_GT),
+        patch.object(_eval, "RESULTS_PATH", results_p),
+        patch.object(_eval, "SUMMARY_PATH", summary_p),
+        patch("sys.argv", ["eval.py", "--data", data_file, "--n", "1"]),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
+    ):
+        _eval.main()  # must not raise SystemExit
+
+
+def test_main_label_accuracy_threshold_constant_matches_ci_gate():
+    """LABEL_ACCURACY_THRESHOLD must equal 0.80 to match the CI eval.yml gate."""
+    assert _eval.LABEL_ACCURACY_THRESHOLD == pytest.approx(0.80)

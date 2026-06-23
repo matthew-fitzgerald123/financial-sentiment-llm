@@ -102,6 +102,7 @@ def compute_averages(results: list[dict]) -> dict:
 
 
 ROUGE_L_THRESHOLD = 0.85
+LABEL_ACCURACY_THRESHOLD = 0.80
 
 
 def check_gate(results: list, threshold: float = ROUGE_L_THRESHOLD) -> tuple:
@@ -214,11 +215,13 @@ def main():
     if args.data != VALID_JSONL:
         print(f"(Evaluated on out-of-domain dataset: {args.data})")
 
-    avg_rougeL, passed = check_gate(results)
-    print(f"\nROUGE-L gate (>= {ROUGE_L_THRESHOLD}): avg={avg_rougeL:.3f} {'PASS' if passed else 'FAIL'}")
+    avg_rougeL, rouge_passed = check_gate(results)
+    label_passed = ft_acc >= LABEL_ACCURACY_THRESHOLD
+    print(f"\nROUGE-L gate       (>= {ROUGE_L_THRESHOLD}): avg={avg_rougeL:.3f} {'PASS' if rouge_passed else 'FAIL'}")
+    print(f"Label accuracy gate (>= {LABEL_ACCURACY_THRESHOLD}): {ft_acc:.3f} {'PASS' if label_passed else 'FAIL'}")
     if args.no_gate:
         print("(gate skipped via --no-gate)")
-    elif not passed:
+    elif not rouge_passed or not label_passed:
         import sys
         sys.exit(1)
 

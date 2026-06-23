@@ -5,6 +5,7 @@ No network access, GPU, or model weights required.
 import json
 import importlib.util
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -195,3 +196,140 @@ def test_write_jsonl_single_example(tmp_path):
     lines = [ln for ln in out.read_text().splitlines() if ln.strip()]
     assert len(lines) == 1
     assert json.loads(lines[0])["text"] == "only one"
+
+
+# ---------------------------------------------------------------------------
+# main() — orchestration (network and file I/O are mocked)
+# ---------------------------------------------------------------------------
+
+_FORMATTED_TEXT = (
+    "<s>[INST] Classify the sentiment of the following financial statement "
+    "and briefly explain your reasoning:\n\n"
+    "\"Revenue grew 5% year-over-year.\" [/INST]\n"
+    "Sentiment: positive. This statement reflects favorable financial conditions. </s>"
+)
+
+_TRAIN_SPLIT = [{"text": _FORMATTED_TEXT} for _ in range(4)]
+_VALID_SPLIT = [{"text": _FORMATTED_TEXT} for _ in range(2)]
+
+
+def _make_mock_dataset():
+    """Return a mock HuggingFace DatasetDict that supports split access and .map()."""
+    train_mock = MagicMock()
+    train_mock.map.return_value = _TRAIN_SPLIT
+
+    test_mock = MagicMock()
+    test_mock.map.return_value = _VALID_SPLIT
+
+    mock_raw = MagicMock()
+    mock_raw.__getitem__.side_effect = lambda key: train_mock if key == "train" else test_mock
+    return mock_raw, train_mock, test_mock
+
+
+def _run_main():
+    """Run prepare.main() with load_dataset and write_jsonl mocked."""
+    mock_raw, train_mock, test_mock = _make_mock_dataset()
+    with (
+        patch.object(_prepare, "load_dataset", return_value=mock_raw) as mock_load,
+        patch.object(_prepare, "write_jsonl") as mock_write,
+    ):
+        _prepare.main()
+    return mock_load, mock_write, train_mock, test_mock
+
+
+def test_main_calls_load_dataset():
+    """main() must call load_dataset with the correct HuggingFace dataset name."""
+    mock_load, _, _, _ = _run_main()
+    mock_load.assert_called_once_with("nickmuchi/financial-classification")
+
+
+def test_main_calls_write_jsonl_twice():
+    """main() must call write_jsonl exactly twice — once for train, once for valid."""
+    _, mock_write, _, _ = _run_main()
+    assert mock_write.call_count == 2
+
+
+def test_main_writes_train_jsonl():
+    """main() must write the train split to a path ending in train.jsonl."""
+    _, mock_write, _, _ = _run_main()
+    paths = [str(call.args[1]) for call in mock_write.call_args_list]
+    assert any("train.jsonl" in p for p in paths)
+
+
+def test_main_writes_valid_jsonl():
+    """main() must write the valid split to a path ending in valid.jsonl."""
+    _, mock_write, _, _ = _run_main()
+    paths = [str(call.args[1]) for call in mock_write.call_args_list]
+    assert any("valid.jsonl" in p for p in paths)
+
+
+def test_main_maps_format_prompt_on_train():
+    """main() must call .map(format_prompt) on the train split."""
+    _, _, train_mock, _ = _run_main()
+    train_mock.map.assert_called_once_with(_prepare.format_prompt)
+
+
+def test_main_maps_format_prompt_on_test():
+    """main() must call .map(format_prompt) on the test split."""
+    _, _, _, test_mock = _run_main()
+    test_mock.map.assert_called_once_with(_prepare.format_prompt)
+
+
+def test_main_train_path_in_data_dir():
+    """train.jsonl path must be under DATA_DIR."""
+    _, mock_write, _, _ = _run_main()
+    train_path = str(mock_write.call_args_list[0].args[1])
+    assert str(_prepare.DATA_DIR) in train_path
+
+
+def test_main_valid_path_in_data_dir():
+    """valid.jsonl path must be under DATA_DIR."""
+    _, mock_write, _, _ = _run_main()
+    valid_path = str(mock_write.call_args_list[1].args[1])
+    assert str(_prepare.DATA_DIR) in valid_path
+
+
+def test_main_train_write_receives_train_split():
+    """The first write_jsonl call must receive the mapped train split."""
+    mock_raw, train_mock, test_mock = _make_mock_dataset()
+    with (
+        patch.object(_prepare, "load_dataset", return_value=mock_raw),
+        patch.object(_prepare, "write_jsonl") as mock_write,
+    ):
+        _prepare.main()
+    assert mock_write.call_args_list[0].args[0] is _TRAIN_SPLIT
+
+
+def test_main_valid_write_receives_test_split():
+    """The second write_jsonl call must receive the mapped test split."""
+    mock_raw, train_mock, test_mock = _make_mock_dataset()
+    with (
+        patch.object(_prepare, "load_dataset", return_value=mock_raw),
+        patch.object(_prepare, "write_jsonl") as mock_write,
+    ):
+        _prepare.main()
+    assert mock_write.call_args_list[1].args[0] is _VALID_SPLIT
+
+
+def test_main_accesses_train_split():
+    """main() must access raw['train'] for the training split."""
+    mock_raw, train_mock, test_mock = _make_mock_dataset()
+    with (
+        patch.object(_prepare, "load_dataset", return_value=mock_raw),
+        patch.object(_prepare, "write_jsonl"),
+    ):
+        _prepare.main()
+    accessed_keys = [c.args[0] for c in mock_raw.__getitem__.call_args_list]
+    assert "train" in accessed_keys
+
+
+def test_main_uses_test_split_for_valid():
+    """main() must use raw['test'] (not 'train') to produce valid.jsonl."""
+    mock_raw, train_mock, test_mock = _make_mock_dataset()
+    with (
+        patch.object(_prepare, "load_dataset", return_value=mock_raw),
+        patch.object(_prepare, "write_jsonl"),
+    ):
+        _prepare.main()
+    accessed_keys = [c.args[0] for c in mock_raw.__getitem__.call_args_list]
+    assert "test" in accessed_keys
