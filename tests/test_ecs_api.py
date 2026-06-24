@@ -181,3 +181,80 @@ def test_predict_stream_missing_question(client):
     """Missing question field on /predict/stream must be rejected with 422."""
     r = client.post("/predict/stream", json={})
     assert r.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# MOCK_MODE inference helpers — exercised without patching _generate or
+# _stream_into_queue so the guards added for MOCK_MODE are directly tested.
+# ---------------------------------------------------------------------------
+
+def test_generate_returns_mock_response_in_mock_mode():
+    """_generate must return a canned response in MOCK_MODE without hitting transformers."""
+    from app.main_ecs import _generate
+    result = _generate("Classify: 'Earnings beat expectations.'", 64)
+    assert "Sentiment:" in result
+    assert "positive" in result.lower()
+
+
+def test_generate_mock_response_is_non_empty():
+    from app.main_ecs import _generate
+    result = _generate("Any question.", 128)
+    assert len(result) > 0
+
+
+def test_stream_into_queue_sets_done_in_mock_mode():
+    """_stream_into_queue must set the done Event without loading transformers."""
+    import threading
+    from queue import Queue
+    from threading import Event
+    from app.main_ecs import _stream_into_queue
+
+    q = Queue()
+    done = Event()
+    t = threading.Thread(target=_stream_into_queue, args=("Classify.", 64, q, done))
+    t.start()
+    t.join(timeout=2.0)
+
+    assert done.is_set(), "_stream_into_queue did not set done in MOCK_MODE"
+
+
+def test_stream_into_queue_emits_tokens_in_mock_mode():
+    """_stream_into_queue must put at least one token into the queue in MOCK_MODE."""
+    import threading
+    from queue import Queue
+    from threading import Event
+    from app.main_ecs import _stream_into_queue
+
+    q = Queue()
+    done = Event()
+    t = threading.Thread(target=_stream_into_queue, args=("Classify.", 64, q, done))
+    t.start()
+    t.join(timeout=2.0)
+
+    tokens = []
+    while not q.empty():
+        tokens.append(q.get_nowait())
+    assert len(tokens) > 0, "_stream_into_queue emitted no tokens in MOCK_MODE"
+
+
+def test_predict_works_end_to_end_in_mock_mode():
+    """/predict must return 200 with a valid response in MOCK_MODE without any patching."""
+    from app.main_ecs import app as ecs_app
+    with TestClient(ecs_app) as c:
+        r = c.post("/predict", json={"question": "Classify: 'Revenue rose 12%.'", "max_tokens": 64})
+    assert r.status_code == 200
+    data = r.json()
+    assert "answer" in data
+    assert "label" in data
+    assert len(data["answer"]) > 0
+
+
+def test_predict_stream_works_end_to_end_in_mock_mode():
+    """/predict/stream must emit tokens and [DONE] in MOCK_MODE without any patching."""
+    from app.main_ecs import app as ecs_app
+    with TestClient(ecs_app) as c:
+        r = c.post("/predict/stream", json={"question": "Classify: 'EPS beat by 10%.'", "max_tokens": 64})
+    assert r.status_code == 200
+    assert "data: [DONE]" in r.text
+    lines = [ln for ln in r.text.splitlines() if ln.startswith("data:") and "[DONE]" not in ln]
+    assert len(lines) > 0

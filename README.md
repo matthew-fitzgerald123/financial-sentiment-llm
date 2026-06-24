@@ -108,6 +108,9 @@ make serve
 # Serve merged model (no adapter overhead) — run 'make merge' first
 make serve-merged
 
+# Serve ECS-compatible backend (transformers + PEFT; MOCK_MODE avoids loading weights)
+make serve-ecs
+
 # Serve with vLLM GPU backend (requires CUDA; use MOCK_MODE=true without a GPU)
 MOCK_MODE=true make serve-vllm
 ```
