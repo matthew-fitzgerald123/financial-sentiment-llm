@@ -182,6 +182,8 @@ def main():
         "ft_rougeL": avgs["ft_avg_rougeL"],
         "label_accuracy_base": base_acc,
         "label_accuracy_finetuned": ft_acc,
+        "ft_rougeL_gate_passed": avgs["ft_rougeL_gate_passed"],
+        "label_accuracy_gate_passed": ft_acc >= LABEL_ACCURACY_THRESHOLD,
     }
     save_summary(SUMMARY_PATH, summary)
 

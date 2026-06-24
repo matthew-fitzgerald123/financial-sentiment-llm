@@ -555,3 +555,70 @@ def test_main_gate_does_not_exit_when_both_thresholds_pass(data_file, tmp_path):
 def test_main_label_accuracy_threshold_constant_matches_ci_gate():
     """LABEL_ACCURACY_THRESHOLD must equal 0.80 to match the CI eval.yml gate."""
     assert _eval.LABEL_ACCURACY_THRESHOLD == pytest.approx(0.80)
+
+
+# ---------------------------------------------------------------------------
+# Gate-passed flags in summary.json
+# ---------------------------------------------------------------------------
+
+def _run_main_for_summary(data_file, tmp_path, generate_return):
+    results_p = str(tmp_path / "results.json")
+    summary_p = str(tmp_path / "summary.json")
+    with (
+        patch.object(_eval, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_eval, "generate", return_value=generate_return),
+        patch.object(_eval, "RESULTS_PATH", results_p),
+        patch.object(_eval, "SUMMARY_PATH", summary_p),
+        patch("sys.argv", ["eval.py", "--data", data_file, "--n", "1", "--no-gate"]),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
+    ):
+        _eval.main()
+    return json.loads(Path(summary_p).read_text())
+
+
+def test_summary_contains_ft_rougeL_gate_passed(data_file, tmp_path):
+    """summary.json must include the ft_rougeL_gate_passed boolean flag."""
+    summary = _run_main_for_summary(data_file, tmp_path, _GT)
+    assert "ft_rougeL_gate_passed" in summary
+
+
+def test_summary_contains_label_accuracy_gate_passed(data_file, tmp_path):
+    """summary.json must include the label_accuracy_gate_passed boolean flag."""
+    summary = _run_main_for_summary(data_file, tmp_path, _GT)
+    assert "label_accuracy_gate_passed" in summary
+
+
+def test_summary_rougeL_gate_passed_true_on_good_output(data_file, tmp_path):
+    """ft_rougeL_gate_passed must be True when the fine-tuned ROUGE-L >= 0.85."""
+    summary = _run_main_for_summary(data_file, tmp_path, _GT)
+    assert summary["ft_rougeL_gate_passed"] is True
+
+
+def test_summary_rougeL_gate_passed_false_on_junk_output(data_file, tmp_path):
+    """ft_rougeL_gate_passed must be False when the fine-tuned ROUGE-L < 0.85."""
+    summary = _run_main_for_summary(data_file, tmp_path, _JUNK)
+    assert summary["ft_rougeL_gate_passed"] is False
+
+
+def test_summary_label_accuracy_gate_passed_true_on_good_output(data_file, tmp_path):
+    """label_accuracy_gate_passed must be True when label accuracy >= 0.80."""
+    summary = _run_main_for_summary(data_file, tmp_path, _GT)
+    assert summary["label_accuracy_gate_passed"] is True
+
+
+def test_summary_label_accuracy_gate_passed_false_on_wrong_label(data_file, tmp_path):
+    """label_accuracy_gate_passed must be False when label accuracy < 0.80."""
+    summary = _run_main_for_summary(data_file, tmp_path, _WRONG_LABEL)
+    assert summary["label_accuracy_gate_passed"] is False
+
+
+def test_summary_gate_flags_are_booleans(data_file, tmp_path):
+    """Gate-passed flags must be JSON booleans, not strings or ints."""
+    summary = _run_main_for_summary(data_file, tmp_path, _GT)
+    assert isinstance(summary["ft_rougeL_gate_passed"], bool)
+    assert isinstance(summary["label_accuracy_gate_passed"], bool)
