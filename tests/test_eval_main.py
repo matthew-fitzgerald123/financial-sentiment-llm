@@ -98,7 +98,9 @@ def test_main_results_json_has_expected_keys(data_file, tmp_path):
 
     entry = json.loads(Path(results_p).read_text())[0]
     for key in (
-        "question", "ground_truth", "base_model", "finetuned",
+        "question", "ground_truth", "gt_label",
+        "base_model", "base_label",
+        "finetuned", "ft_label",
         "base_rouge1", "base_rougeL", "ft_rouge1", "ft_rougeL",
     ):
         assert key in entry, f"results.json entry missing key: {key}"
@@ -150,7 +152,10 @@ def test_main_summary_contains_ci_gate_keys(data_file, tmp_path):
         _eval.main()
 
     summary = json.loads(Path(summary_p).read_text())
-    for key in ("ft_rougeL", "label_accuracy_finetuned", "n_examples", "data_path"):
+    for key in (
+        "ft_rougeL", "label_accuracy_finetuned", "n_examples", "data_path",
+        "ft_rougeL_gate_passed", "label_accuracy_gate_passed",
+    ):
         assert key in summary, f"CI gate key missing from summary.json: {key}"
 
 
@@ -247,7 +252,11 @@ def test_main_calls_log_metrics_with_rouge_keys(data_file, tmp_path):
 
     mock_log_metrics.assert_called_once()
     logged = mock_log_metrics.call_args[0][0]
-    for key in ("ft_avg_rouge1", "ft_avg_rougeL", "label_accuracy_finetuned"):
+    for key in (
+        "base_avg_rouge1", "base_avg_rougeL",
+        "ft_avg_rouge1", "ft_avg_rougeL",
+        "label_accuracy_base", "label_accuracy_finetuned",
+    ):
         assert key in logged, f"Expected MLflow metric key missing: {key}"
 
 
