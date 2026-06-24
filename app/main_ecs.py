@@ -28,6 +28,8 @@ executor = ThreadPoolExecutor(max_workers=1)
 
 MOCK_MODE = os.getenv("MOCK_MODE", "false").lower() == "true"
 
+_MOCK_RESPONSE = "Sentiment: positive. This statement reflects favorable financial conditions."
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -78,6 +80,8 @@ class Response(BaseModel):
 
 
 def _generate(question: str, max_tokens: int) -> str:
+    if MOCK_MODE:
+        return _MOCK_RESPONSE
     from transformers import pipeline as hf_pipeline
     model = pipeline["model"]
     tokenizer = pipeline["tokenizer"]
@@ -89,6 +93,11 @@ def _generate(question: str, max_tokens: int) -> str:
 
 
 def _stream_into_queue(question: str, max_tokens: int, q: Queue, done: Event):
+    if MOCK_MODE:
+        for token in _MOCK_RESPONSE.split():
+            q.put(token + " ")
+        done.set()
+        return
     from transformers import TextIteratorStreamer
     import threading
     model = pipeline["model"]
