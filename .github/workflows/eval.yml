@@ -46,24 +46,17 @@ jobs:
             eval/summary.json
           retention-days: 30
 
-      - name: Gate on ROUGE-L threshold
+      - name: Gate on eval quality thresholds
         run: |
           python - <<'EOF'
           import json, sys
           with open("eval/summary.json") as f:
               s = json.load(f)
-          rougeL = s["ft_rougeL"]
-          label_acc = s["label_accuracy_finetuned"]
-          print(f"avg fine-tuned ROUGE-L:    {rougeL:.3f}")
-          print(f"fine-tuned label accuracy: {label_acc:.3f}")
-          failed = False
-          if rougeL < 0.85:
-              print("FAIL: ROUGE-L below 0.85 threshold")
-              failed = True
-          if label_acc < 0.80:
-              print("FAIL: label accuracy below 0.80 threshold")
-              failed = True
-          if failed:
+          rouge_passed = s["ft_rougeL_gate_passed"]
+          label_passed = s["label_accuracy_gate_passed"]
+          print(f"avg fine-tuned ROUGE-L:    {s['ft_rougeL']:.3f}  ({'PASS' if rouge_passed else 'FAIL'})")
+          print(f"fine-tuned label accuracy: {s['label_accuracy_finetuned']:.3f}  ({'PASS' if label_passed else 'FAIL'})")
+          if not rouge_passed or not label_passed:
               sys.exit(1)
           print("PASS")
           EOF

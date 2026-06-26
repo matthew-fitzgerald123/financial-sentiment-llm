@@ -32,6 +32,11 @@ _JUNK = "xyz abc def completely unrelated output"
 # high (> 0.85) because most tokens match, but label accuracy will be 0.
 _WRONG_LABEL = "Sentiment: positive. This statement reflects unfavorable financial conditions."
 
+# Correct label but completely different wording — label accuracy is 1.0
+# (label "negative" matches) but ROUGE-L is low because the explanation
+# shares almost no tokens with the ground-truth explanation.
+_CORRECT_LABEL_WRONG_WORDING = "Sentiment: negative. Lorem ipsum dolor sit amet consectetur."
+
 
 @pytest.fixture()
 def data_file(tmp_path):
@@ -622,3 +627,15 @@ def test_summary_gate_flags_are_booleans(data_file, tmp_path):
     summary = _run_main_for_summary(data_file, tmp_path, _GT)
     assert isinstance(summary["ft_rougeL_gate_passed"], bool)
     assert isinstance(summary["label_accuracy_gate_passed"], bool)
+
+
+def test_summary_rougeL_fails_but_label_accuracy_passes(data_file, tmp_path):
+    """When the label is correct but wording differs, ROUGE-L fails while label accuracy passes.
+
+    This covers the case where the model learns the right classification but
+    generates its own explanation — a realistic degradation pattern.  The two
+    gates must be evaluated independently so neither masks the other.
+    """
+    summary = _run_main_for_summary(data_file, tmp_path, _CORRECT_LABEL_WRONG_WORDING)
+    assert summary["ft_rougeL_gate_passed"] is False
+    assert summary["label_accuracy_gate_passed"] is True
