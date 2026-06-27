@@ -95,6 +95,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--examples", type=int, default=10)
     parser.add_argument("--max-tokens", type=int, default=64)
+    parser.add_argument(
+        "--output",
+        default=RESULTS_PATH,
+        help="Path to write benchmark results JSON (default: %(default)s)",
+    )
     args = parser.parse_args()
 
     examples = load_examples(VALID_JSONL, args.examples)
@@ -129,8 +134,8 @@ def main():
             restore_adapter_scale(ADAPTER_PATH)
 
     # --- Save results ---
-    Path(RESULTS_PATH).parent.mkdir(exist_ok=True)
-    with open(RESULTS_PATH, "w") as f:
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    with open(args.output, "w") as f:
         json.dump(results, f, indent=2)
 
     # --- Print table ---
@@ -140,7 +145,7 @@ def main():
         scale_str = f"{r['scale']:.1f}" if r["scale"] is not None else "-"
         print(f"{r['config']:<30} {scale_str:>8} {r['tps_median']:>8.1f} {r['rougeL_mean']:>8.3f}")
 
-    print(f"\nFull results → {RESULTS_PATH}")
+    print(f"\nFull results → {args.output}")
 
 
 if __name__ == "__main__":
