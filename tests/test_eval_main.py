@@ -648,3 +648,146 @@ def test_summary_rougeL_fails_but_label_accuracy_passes(data_file, tmp_path):
     summary = _run_main_for_summary(data_file, tmp_path, _CORRECT_LABEL_WRONG_WORDING)
     assert summary["ft_rougeL_gate_passed"] is False
     assert summary["label_accuracy_gate_passed"] is True
+
+
+# ---------------------------------------------------------------------------
+# --output-results and --output-summary arguments
+# ---------------------------------------------------------------------------
+
+def _run_main_custom_outputs(data_file, results_p, summary_p, extra_argv=None):
+    argv = ["eval.py", "--data", data_file, "--n", "1", "--no-gate"]
+    argv += ["--output-results", str(results_p), "--output-summary", str(summary_p)]
+    if extra_argv:
+        argv += extra_argv
+    with (
+        patch.object(_eval, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_eval, "generate", return_value=_GT),
+        patch("sys.argv", argv),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
+    ):
+        _eval.main()
+
+
+def test_output_results_arg_writes_to_custom_path(data_file, tmp_path):
+    """--output-results must write results JSON to the specified path."""
+    results_p = tmp_path / "custom" / "results.json"
+    summary_p = tmp_path / "custom" / "summary.json"
+    _run_main_custom_outputs(data_file, results_p, summary_p)
+    assert results_p.exists(), "--output-results path was not written"
+
+
+def test_output_summary_arg_writes_to_custom_path(data_file, tmp_path):
+    """--output-summary must write summary JSON to the specified path."""
+    results_p = tmp_path / "custom" / "results.json"
+    summary_p = tmp_path / "custom" / "summary.json"
+    _run_main_custom_outputs(data_file, results_p, summary_p)
+    assert summary_p.exists(), "--output-summary path was not written"
+
+
+def test_output_results_arg_creates_parent_dirs(data_file, tmp_path):
+    """--output-results must create any missing parent directories."""
+    results_p = tmp_path / "a" / "b" / "c" / "results.json"
+    summary_p = tmp_path / "summary.json"
+    _run_main_custom_outputs(data_file, results_p, summary_p)
+    assert results_p.exists()
+
+
+def test_output_results_contains_valid_list(data_file, tmp_path):
+    """Custom --output-results path must contain a valid JSON list."""
+    results_p = tmp_path / "results.json"
+    summary_p = tmp_path / "summary.json"
+    _run_main_custom_outputs(data_file, results_p, summary_p)
+    data = json.loads(results_p.read_text())
+    assert isinstance(data, list)
+    assert len(data) == 1
+
+
+def test_output_summary_contains_gate_flags(data_file, tmp_path):
+    """Custom --output-summary path must contain gate-passed flags."""
+    results_p = tmp_path / "results.json"
+    summary_p = tmp_path / "summary.json"
+    _run_main_custom_outputs(data_file, results_p, summary_p)
+    summary = json.loads(summary_p.read_text())
+    assert "ft_rougeL_gate_passed" in summary
+    assert "label_accuracy_gate_passed" in summary
+
+
+def test_ood_pattern_writes_to_separate_files(tmp_path):
+    """OOD eval pattern: --data + --no-gate + custom output paths.
+
+    Verifies that OOD results land in dedicated files so they do not overwrite
+    the main eval output, which is the intended CI workflow design.
+    """
+    ood_data = tmp_path / "ood.jsonl"
+    ood_data.write_text(json.dumps({"text": _SAMPLE_TEXT}) + "\n")
+    main_results = tmp_path / "results.json"
+    main_summary = tmp_path / "summary.json"
+    ood_results = tmp_path / "ood_results.json"
+    ood_summary = tmp_path / "ood_summary.json"
+
+    # Simulate main eval — write main output files
+    _run_main_custom_outputs(str(ood_data), main_results, main_summary)
+    main_summary_content = main_summary.read_text()
+
+    # Simulate OOD eval — must NOT touch main output files
+    _run_main_custom_outputs(str(ood_data), ood_results, ood_summary)
+
+    assert ood_results.exists(), "OOD results file not written"
+    assert ood_summary.exists(), "OOD summary file not written"
+    assert main_summary.read_text() == main_summary_content, (
+        "OOD eval must not overwrite main eval summary.json"
+    )
+
+
+def test_default_output_paths_match_module_constants(data_file, tmp_path):
+    """Without --output-results / --output-summary the defaults match RESULTS_PATH and SUMMARY_PATH."""
+    results_p = str(tmp_path / "results.json")
+    summary_p = str(tmp_path / "summary.json")
+    with (
+        patch.object(_eval, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_eval, "generate", return_value=_GT),
+        patch.object(_eval, "RESULTS_PATH", results_p),
+        patch.object(_eval, "SUMMARY_PATH", summary_p),
+        patch("sys.argv", ["eval.py", "--data", data_file, "--n", "1"]),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
+    ):
+        _eval.main()
+
+    assert Path(results_p).exists(), "Default results path not written"
+    assert Path(summary_p).exists(), "Default summary path not written"
+
+
+def test_mlflow_logs_custom_output_results_artifact(data_file, tmp_path):
+    """MLflow log_artifact must be called with the custom --output-results path."""
+    results_p = tmp_path / "my_results.json"
+    summary_p = tmp_path / "my_summary.json"
+    with (
+        patch.object(_eval, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_eval, "generate", return_value=_GT),
+        patch("sys.argv", [
+            "eval.py", "--data", data_file, "--n", "1", "--no-gate",
+            "--output-results", str(results_p),
+            "--output-summary", str(summary_p),
+        ]),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact") as mock_log_artifact,
+    ):
+        _eval.main()
+
+    logged = [c[0][0] for c in mock_log_artifact.call_args_list]
+    assert str(results_p) in logged, "Custom results path not logged to MLflow"
+    assert str(summary_p) in logged, "Custom summary path not logged to MLflow"
