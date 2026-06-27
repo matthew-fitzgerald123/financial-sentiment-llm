@@ -404,3 +404,68 @@ def test_main_sweep_loads_use_adapter_path(tmp_path):
     sweep_calls = mock_load.call_args_list[1:]
     for call in sweep_calls:
         assert call.kwargs.get("adapter_path") == _bench.ADAPTER_PATH
+
+
+# ---------------------------------------------------------------------------
+# --output argument
+# ---------------------------------------------------------------------------
+
+def _run_main_custom_output(output_p, extra_argv=None):
+    argv = ["quant_bench.py", "--output", str(output_p)] + (extra_argv or [])
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES),
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale"),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+
+
+def test_output_arg_writes_to_custom_path(tmp_path):
+    """--output must write results JSON to the specified path."""
+    custom = tmp_path / "custom" / "bench.json"
+    _run_main_custom_output(custom)
+    assert custom.exists(), "--output path was not written"
+
+
+def test_output_arg_creates_parent_dirs(tmp_path):
+    """--output must create any missing parent directories."""
+    custom = tmp_path / "a" / "b" / "c" / "results.json"
+    _run_main_custom_output(custom)
+    assert custom.exists()
+
+
+def test_output_arg_contains_valid_json(tmp_path):
+    """Custom --output path must contain a valid JSON list."""
+    custom = tmp_path / "bench.json"
+    _run_main_custom_output(custom)
+    data = json.loads(custom.read_text())
+    assert isinstance(data, list)
+
+
+def test_output_arg_does_not_write_to_results_path(tmp_path):
+    """When --output is set, RESULTS_PATH must not be written."""
+    default_p = tmp_path / "default.json"
+    custom = tmp_path / "custom.json"
+    argv = ["quant_bench.py", "--output", str(custom)]
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES),
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale"),
+        patch.object(_bench, "RESULTS_PATH", str(default_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+    assert custom.exists(), "Custom output path not written"
+    assert not default_p.exists(), "RESULTS_PATH must not be written when --output is set"
+
+
+def test_default_output_uses_results_path_constant(tmp_path):
+    """Without --output, the results must be written to RESULTS_PATH."""
+    default_p = tmp_path / "bench_results.json"
+    _run_main(default_p)
+    assert default_p.exists(), "RESULTS_PATH not written when --output is omitted"
