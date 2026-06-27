@@ -62,7 +62,13 @@ jobs:
           EOF
 
       - name: Run OOD evaluation (informational)
-        run: python eval/eval.py --data data/ood_sample.jsonl --n 10 --no-gate
+        run: |
+          python eval/eval.py \
+            --data data/ood_sample.jsonl \
+            --n 10 \
+            --no-gate \
+            --output-results eval/ood_results.json \
+            --output-summary eval/ood_summary.json
         env:
           HF_HUB_ENABLE_HF_TRANSFER: "1"
 
@@ -71,6 +77,6 @@ jobs:
         with:
           name: ood-eval-results-${{ github.sha }}
           path: |
-            eval/results.json
-            eval/summary.json
+            eval/ood_results.json
+            eval/ood_summary.json
           retention-days: 30

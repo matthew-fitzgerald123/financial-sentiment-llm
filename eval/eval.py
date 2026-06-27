@@ -123,6 +123,18 @@ def main():
         dest="no_gate",
         help="Skip the ROUGE-L exit gate (for informational / OOD runs)",
     )
+    parser.add_argument(
+        "--output-results",
+        default=RESULTS_PATH,
+        dest="output_results",
+        help="Path to write per-example results JSON (default: eval/results.json)",
+    )
+    parser.add_argument(
+        "--output-summary",
+        default=SUMMARY_PATH,
+        dest="output_summary",
+        help="Path to write aggregate summary JSON (default: eval/summary.json)",
+    )
     args = parser.parse_args()
 
     examples = load_examples(args.data, args.n)
@@ -162,8 +174,8 @@ def main():
         if (i + 1) % 10 == 0:
             print(f"  {i + 1}/{len(examples)} evaluated")
 
-    Path(RESULTS_PATH).parent.mkdir(exist_ok=True)
-    with open(RESULTS_PATH, "w") as f:
+    Path(args.output_results).parent.mkdir(parents=True, exist_ok=True)
+    with open(args.output_results, "w") as f:
         json.dump(results, f, indent=2)
 
     avgs = compute_averages(results)
@@ -185,7 +197,7 @@ def main():
         "ft_rougeL_gate_passed": avgs["ft_rougeL_gate_passed"],
         "label_accuracy_gate_passed": ft_acc >= LABEL_ACCURACY_THRESHOLD,
     }
-    save_summary(SUMMARY_PATH, summary)
+    save_summary(args.output_summary, summary)
 
     mlflow.set_experiment("mistral-finance-mlx-lora")
     with mlflow.start_run(run_name="eval"):
@@ -202,8 +214,8 @@ def main():
         mlflow.log_param("rouge_l_gate", ROUGE_L_GATE)
         mlflow.log_param("gate_passed", avgs["ft_rougeL_gate_passed"])
         mlflow.log_param("data_path", args.data)
-        mlflow.log_artifact(RESULTS_PATH)
-        mlflow.log_artifact(SUMMARY_PATH)
+        mlflow.log_artifact(args.output_results)
+        mlflow.log_artifact(args.output_summary)
 
     print(f"\n{'Model':<20} {'ROUGE-1':>10} {'ROUGE-L':>10} {'Label Acc':>10}")
     print("-" * 54)
@@ -211,8 +223,8 @@ def main():
     print(f"{'Fine-tuned':<20} {avgs['ft_avg_rouge1']:>10.3f} {avgs['ft_avg_rougeL']:>10.3f} {ft_acc:>10.3f}")
     gate_status = "PASS" if avgs["ft_rougeL_gate_passed"] else "FAIL"
     print(f"\nROUGE-L gate (≥{ROUGE_L_GATE}): {gate_status}")
-    print(f"Full results  → {RESULTS_PATH}")
-    print(f"Summary       → {SUMMARY_PATH}")
+    print(f"Full results  → {args.output_results}")
+    print(f"Summary       → {args.output_summary}")
     print("Metrics logged to MLflow experiment 'mistral-finance-mlx-lora'")
     if args.data != VALID_JSONL:
         print(f"(Evaluated on out-of-domain dataset: {args.data})")

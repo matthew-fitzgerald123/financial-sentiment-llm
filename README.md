@@ -186,6 +186,12 @@ python eval/eval.py --adapter /path/to/my-adapter --n 50
 
 # Skip the ROUGE-L exit gate (informational / OOD runs where high variance is expected)
 python eval/eval.py --data data/ood_sample.jsonl --n 10 --no-gate
+
+# Write OOD results to separate files (avoids overwriting main eval output)
+python eval/eval.py \
+    --data data/ood_sample.jsonl --n 10 --no-gate \
+    --output-results eval/ood_results.json \
+    --output-summary eval/ood_summary.json
 ```
 
 Full per-example results in `eval/results.json` after running `make eval`. Aggregate metrics (ROUGE-1, ROUGE-L, label accuracy for both models) and gate-passed boolean flags (`ft_rougeL_gate_passed`, `label_accuracy_gate_passed`) are saved to `eval/summary.json`; the CI gate reads the pre-computed flags directly from the artifact so threshold logic lives in exactly one place (`eval/eval.py`). All metrics and the gate result are also logged to the MLflow experiment `mistral-finance-mlx-lora`.
