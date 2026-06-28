@@ -355,6 +355,38 @@ def test_run_generate_uses_default_max_tokens():
     assert mock_gen.call_args.kwargs["max_tokens"] == eval_module.MAX_TOKENS
 
 
+# ---------------------------------------------------------------------------
+# ROUGE-L gate threshold constants
+# ---------------------------------------------------------------------------
+# compute_averages() uses ROUGE_L_GATE to write ft_rougeL_gate_passed into
+# summary.json.  check_gate() defaults to ROUGE_L_THRESHOLD to decide
+# sys.exit(1).  If these two constants diverge, summary.json could report
+# "passed" while the eval process exits 1 (or vice versa), silently breaking
+# the CI gate.  The tests below anchor both constants to 0.85 and verify they
+# are equal — mirroring the existing test_main_label_accuracy_threshold_constant_matches_ci_gate
+# in test_eval_main.py.
+
+def test_rouge_l_gate_constant_value():
+    """ROUGE_L_GATE must be 0.85 — the value the CI eval.yml gate step expects."""
+    assert eval_module.ROUGE_L_GATE == pytest.approx(0.85)
+
+
+def test_rouge_l_threshold_constant_value():
+    """ROUGE_L_THRESHOLD must be 0.85 — the value used by check_gate's default."""
+    assert eval_module.ROUGE_L_THRESHOLD == pytest.approx(0.85)
+
+
+def test_rouge_l_gate_equals_rouge_l_threshold():
+    """ROUGE_L_GATE and ROUGE_L_THRESHOLD must be equal.
+
+    compute_averages writes ft_rougeL_gate_passed to summary.json using
+    ROUGE_L_GATE.  main() calls check_gate (which defaults to ROUGE_L_THRESHOLD)
+    to drive sys.exit(1).  A discrepancy between the two constants would cause
+    summary.json to disagree with the actual process exit code.
+    """
+    assert eval_module.ROUGE_L_GATE == pytest.approx(eval_module.ROUGE_L_THRESHOLD)
+
+
 def test_run_generate_passes_model_and_tokenizer():
     mock_model = MagicMock()
     mock_tokenizer = MagicMock()
