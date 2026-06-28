@@ -187,13 +187,19 @@ def test_save_summary_required_keys(tmp_path):
         "ft_rougeL": 0.970,
         "label_accuracy_base": 0.82,
         "label_accuracy_finetuned": 0.95,
+        "ft_rougeL_gate_passed": True,
+        "label_accuracy_gate_passed": True,
     }
     out = tmp_path / "summary.json"
     eval_module.save_summary(str(out), summary)
 
     loaded = json.loads(out.read_text())
+    # Raw metrics — displayed in CI output
     for key in ("ft_rougeL", "label_accuracy_finetuned"):
-        assert key in loaded, f"CI gate key '{key}' missing from summary"
+        assert key in loaded, f"display metric key '{key}' missing from summary"
+    # Precomputed boolean flags — eval.yml reads these to decide pass/fail
+    for key in ("ft_rougeL_gate_passed", "label_accuracy_gate_passed"):
+        assert key in loaded, f"CI gate flag '{key}' missing from summary"
 
 
 # ---------------------------------------------------------------------------

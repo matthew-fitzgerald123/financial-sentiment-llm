@@ -131,7 +131,7 @@ def test_main_writes_summary_json(data_file, tmp_path):
 
 
 def test_main_summary_contains_ci_gate_keys(data_file, tmp_path):
-    """summary.json must contain the keys the eval.yml CI gate reads."""
+    """summary.json must contain both display metrics and boolean gate flags that eval.yml reads."""
     results_p = str(tmp_path / "results.json")
     summary_p = str(tmp_path / "summary.json")
     with (
@@ -150,8 +150,12 @@ def test_main_summary_contains_ci_gate_keys(data_file, tmp_path):
         _eval.main()
 
     summary = json.loads(Path(summary_p).read_text())
+    # Raw metrics displayed in CI step output
     for key in ("ft_rougeL", "label_accuracy_finetuned", "n_examples", "data_path"):
-        assert key in summary, f"CI gate key missing from summary.json: {key}"
+        assert key in summary, f"display metric key missing from summary.json: {key}"
+    # Precomputed boolean flags — eval.yml reads these to decide pass/fail
+    for key in ("ft_rougeL_gate_passed", "label_accuracy_gate_passed"):
+        assert key in summary, f"CI gate flag missing from summary.json: {key}"
 
 
 def test_main_summary_data_path_matches_arg(data_file, tmp_path):

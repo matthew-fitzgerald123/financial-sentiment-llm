@@ -52,16 +52,14 @@ jobs:
           import json, sys
           with open("eval/summary.json") as f:
               s = json.load(f)
-          rougeL = s["ft_rougeL"]
-          label_acc = s["label_accuracy_finetuned"]
-          print(f"avg fine-tuned ROUGE-L:    {rougeL:.3f}")
-          print(f"fine-tuned label accuracy: {label_acc:.3f}")
+          print(f"avg fine-tuned ROUGE-L:    {s['ft_rougeL']:.3f}")
+          print(f"fine-tuned label accuracy: {s['label_accuracy_finetuned']:.3f}")
           failed = False
-          if rougeL < 0.85:
-              print("FAIL: ROUGE-L below 0.85 threshold")
+          if not s["ft_rougeL_gate_passed"]:
+              print("FAIL: ROUGE-L gate not passed")
               failed = True
-          if label_acc < 0.80:
-              print("FAIL: label accuracy below 0.80 threshold")
+          if not s["label_accuracy_gate_passed"]:
+              print("FAIL: label accuracy gate not passed")
               failed = True
           if failed:
               sys.exit(1)
