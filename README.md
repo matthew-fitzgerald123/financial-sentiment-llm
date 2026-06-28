@@ -176,7 +176,7 @@ make eval
 
 # Bundled OOD fixture (earnings calls, 10-K filings) — no extra data needed
 make eval-ood
-# Equivalent: python eval/eval.py --data data/ood_sample.jsonl --n 10
+# Equivalent: python eval/eval.py --data data/ood_sample.jsonl --n 10 --no-gate
 
 # Custom out-of-domain dataset
 python eval/eval.py --data /path/to/ood.jsonl --n 100

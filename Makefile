@@ -14,7 +14,7 @@ eval:
 	python eval/eval.py
 
 eval-ood:
-	python eval/eval.py --data data/ood_sample.jsonl --n 10
+	python eval/eval.py --data data/ood_sample.jsonl --n 10 --no-gate
 
 mlflow:
 	mlflow ui --host 127.0.0.1 --port 5000
