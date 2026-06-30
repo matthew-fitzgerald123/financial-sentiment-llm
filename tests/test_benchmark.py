@@ -406,6 +406,84 @@ def test_main_sweep_loads_use_adapter_path(tmp_path):
         assert call.kwargs.get("adapter_path") == _bench.ADAPTER_PATH
 
 
+def test_main_custom_adapter_flag_passed_to_load(tmp_path):
+    """--adapter /custom/path must be forwarded to every sweep load() call."""
+    results_p = tmp_path / "bench_results.json"
+    custom_adapter = "/custom/adapter/path"
+    argv = ["quant_bench.py", "--adapter", custom_adapter]
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES),
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())) as mock_load,
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale"),
+        patch.object(_bench, "RESULTS_PATH", str(results_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+    sweep_calls = mock_load.call_args_list[1:]
+    assert len(sweep_calls) == len(_bench.SCALE_MULTIPLIERS)
+    for call in sweep_calls:
+        assert call.kwargs.get("adapter_path") == custom_adapter
+
+
+def test_main_custom_adapter_flag_passed_to_set_adapter_scale(tmp_path):
+    """--adapter /custom/path must be forwarded to set_adapter_scale on every sweep."""
+    results_p = tmp_path / "bench_results.json"
+    custom_adapter = "/custom/adapter/path"
+    argv = ["quant_bench.py", "--adapter", custom_adapter]
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES),
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale") as mock_set,
+        patch.object(_bench, "restore_adapter_scale"),
+        patch.object(_bench, "RESULTS_PATH", str(results_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+    for call in mock_set.call_args_list:
+        assert call.args[0] == custom_adapter
+
+
+def test_main_custom_adapter_flag_passed_to_restore_adapter_scale(tmp_path):
+    """--adapter /custom/path must be forwarded to restore_adapter_scale on every sweep."""
+    results_p = tmp_path / "bench_results.json"
+    custom_adapter = "/custom/adapter/path"
+    argv = ["quant_bench.py", "--adapter", custom_adapter]
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES),
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale") as mock_restore,
+        patch.object(_bench, "RESULTS_PATH", str(results_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+    for call in mock_restore.call_args_list:
+        assert call.args[0] == custom_adapter
+
+
+def test_main_default_adapter_equals_constant(tmp_path):
+    """When --adapter is not supplied, adapter path must equal ADAPTER_PATH constant."""
+    results_p = tmp_path / "bench_results.json"
+    argv = ["quant_bench.py"]
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES),
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())) as mock_load,
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale"),
+        patch.object(_bench, "RESULTS_PATH", str(results_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+    sweep_calls = mock_load.call_args_list[1:]
+    for call in sweep_calls:
+        assert call.kwargs.get("adapter_path") == _bench.ADAPTER_PATH
+
+
 # ---------------------------------------------------------------------------
 # --output argument
 # ---------------------------------------------------------------------------

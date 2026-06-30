@@ -102,6 +102,9 @@ make merge
 # Benchmark LoRA scale vs latency/quality (requires trained adapter)
 make benchmark
 
+# Benchmark a non-default adapter path (mirrors eval.py --adapter)
+python benchmarks/quant_bench.py --examples 20 --adapter /path/to/my-adapter
+
 # Serve locally at http://localhost:8080 (Apple Silicon / mlx-lm)
 make serve
 
