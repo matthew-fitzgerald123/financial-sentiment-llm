@@ -100,6 +100,7 @@ def main():
         default=RESULTS_PATH,
         help="Path to write benchmark results JSON (default: %(default)s)",
     )
+    parser.add_argument("--adapter", default=ADAPTER_PATH, help="Path to LoRA adapter directory")
     args = parser.parse_args()
 
     examples = load_examples(VALID_JSONL, args.examples)
@@ -121,9 +122,9 @@ def main():
         label = f"LoRA scale={effective_scale:.1f} ({mult}x)"
         print(f"\nLoading adapter at scale {effective_scale:.1f} ({mult}x base)...")
 
-        set_adapter_scale(ADAPTER_PATH, effective_scale)
+        set_adapter_scale(args.adapter, effective_scale)
         try:
-            model, tokenizer = load(MODEL_ID, adapter_path=ADAPTER_PATH)
+            model, tokenizer = load(MODEL_ID, adapter_path=args.adapter)
             print(f"  Running {args.examples} examples...")
             stats = run_benchmark(model, tokenizer, examples, args.max_tokens)
             results.append({"config": label, "scale": effective_scale, **stats})
@@ -131,7 +132,7 @@ def main():
             del model, tokenizer
             mx.metal.clear_cache()
         finally:
-            restore_adapter_scale(ADAPTER_PATH)
+            restore_adapter_scale(args.adapter)
 
     # --- Save results ---
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
