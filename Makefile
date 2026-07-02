@@ -1,4 +1,4 @@
-.PHONY: install prepare train eval eval-ood mlflow serve serve-merged serve-ecs serve-vllm merge benchmark test
+.PHONY: install prepare train eval eval-ood mlflow serve serve-merged serve-ecs serve-vllm merge benchmark benchmark-ood test
 
 install:
 	pip install -r requirements.txt
@@ -45,3 +45,7 @@ merge:
 # Benchmark LoRA scale vs latency/quality (requires trained adapter)
 benchmark:
 	python benchmarks/quant_bench.py --examples 20
+
+# Benchmark on bundled OOD fixture (earnings calls, 10-K filings) — saves to a separate file
+benchmark-ood:
+	python benchmarks/quant_bench.py --data data/ood_sample.jsonl --examples 10 --output benchmarks/bench_results_ood.json
