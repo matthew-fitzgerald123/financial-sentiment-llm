@@ -101,6 +101,7 @@ make merge
 
 # Benchmark LoRA scale vs latency/quality (requires trained adapter)
 make benchmark
+# Custom dataset: python benchmarks/quant_bench.py --data data/ood_sample.jsonl
 
 # Benchmark a non-default adapter path (mirrors eval.py --adapter)
 python benchmarks/quant_bench.py --examples 20 --adapter /path/to/my-adapter

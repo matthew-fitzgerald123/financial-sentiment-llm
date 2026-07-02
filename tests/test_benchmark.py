@@ -547,3 +547,73 @@ def test_default_output_uses_results_path_constant(tmp_path):
     default_p = tmp_path / "bench_results.json"
     _run_main(default_p)
     assert default_p.exists(), "RESULTS_PATH not written when --output is omitted"
+
+
+# ---------------------------------------------------------------------------
+# --data flag
+# ---------------------------------------------------------------------------
+
+def _run_main_capture_load_examples(results_p, extra_argv=None):
+    """Run main() and return the mock for load_examples so callers can inspect calls."""
+    argv = ["quant_bench.py"] + (extra_argv or [])
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES) as mock_le,
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale"),
+        patch.object(_bench, "RESULTS_PATH", str(results_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+    return mock_le
+
+
+def test_main_default_data_equals_valid_jsonl_constant(tmp_path):
+    """When --data is not supplied, load_examples must be called with VALID_JSONL."""
+    results_p = tmp_path / "bench_results.json"
+    mock_le = _run_main_capture_load_examples(results_p)
+    assert mock_le.call_args[0][0] == _bench.VALID_JSONL
+
+
+def test_main_custom_data_flag_passed_to_load_examples(tmp_path):
+    """--data /custom/path must be forwarded as the first argument to load_examples."""
+    results_p = tmp_path / "bench_results.json"
+    custom_data = "/custom/data/my_bench.jsonl"
+    mock_le = _run_main_capture_load_examples(results_p, ["--data", custom_data])
+    assert mock_le.call_args[0][0] == custom_data
+
+
+def test_main_custom_data_load_examples_called_once(tmp_path):
+    """load_examples must be called exactly once regardless of the --data path."""
+    results_p = tmp_path / "bench_results.json"
+    mock_le = _run_main_capture_load_examples(results_p, ["--data", "/any/path.jsonl"])
+    assert mock_le.call_count == 1
+
+
+def test_main_custom_data_preserves_examples_count(tmp_path):
+    """--data must not affect how many examples are requested (controlled by --examples)."""
+    results_p = tmp_path / "bench_results.json"
+    custom_data = "/some/custom.jsonl"
+    argv = ["quant_bench.py", "--data", custom_data, "--examples", "7"]
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES) as mock_le,
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale"),
+        patch.object(_bench, "RESULTS_PATH", str(results_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+    assert mock_le.call_args[0][1] == 7
+
+
+def test_main_custom_data_results_still_written(tmp_path):
+    """bench_results.json must still be written when a custom --data path is used."""
+    results_p = tmp_path / "bench_results.json"
+    _run_main_capture_load_examples(results_p, ["--data", "/custom/path.jsonl"])
+    assert results_p.exists()
+    data = json.loads(results_p.read_text())
+    assert isinstance(data, list)
+    assert len(data) == 1 + len(_bench.SCALE_MULTIPLIERS)
