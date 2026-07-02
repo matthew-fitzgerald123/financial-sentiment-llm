@@ -117,6 +117,9 @@ make serve-ecs
 
 # Serve with vLLM GPU backend (requires CUDA; use MOCK_MODE=true without a GPU)
 MOCK_MODE=true make serve-vllm
+
+# Serve the ECS-compatible backend in Docker (requires a trained adapter)
+docker compose up --build
 ```
 
 ## Inference
