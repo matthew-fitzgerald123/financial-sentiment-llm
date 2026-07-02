@@ -10,7 +10,7 @@ baseline. For each configuration we record:
   - ROUGE-L     (average over NUM_EXAMPLES examples)
 
 Usage:
-    python benchmarks/quant_bench.py [--examples N] [--max-tokens N]
+    python benchmarks/quant_bench.py [--examples N] [--max-tokens N] [--output PATH] [--adapter PATH] [--data PATH]
 
 Results saved to benchmarks/bench_results.json and printed as a table.
 """
@@ -101,9 +101,10 @@ def main():
         help="Path to write benchmark results JSON (default: %(default)s)",
     )
     parser.add_argument("--adapter", default=ADAPTER_PATH, help="Path to LoRA adapter directory")
+    parser.add_argument("--data", default=VALID_JSONL, help="JSONL file to benchmark on")
     args = parser.parse_args()
 
-    examples = load_examples(VALID_JSONL, args.examples)
+    examples = load_examples(args.data, args.examples)
     results = []
 
     # --- Baseline: no adapter ---
