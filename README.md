@@ -11,7 +11,7 @@ Fine-tuned Mistral-7B for financial sentiment classification using LoRA on Apple
 
 | Model | ROUGE-1 | ROUGE-L | Label Accuracy |
 |---|---|---|---|
-| Base Mistral-7B-Instruct-v0.3 | 0.113 | 0.094 | — |
+| Base Mistral-7B-Instruct-v0.3 | 0.113 | 0.094 | n/a |
 | Fine-tuned (LoRA) | 0.970 | 0.970 | 0.95+ |
 
 The base model can classify sentiment but generates it in its own verbose, inconsistent format. The fine-tuned model reliably produces structured output (`Sentiment: {label}. This statement reflects...`) that matches the target format with near-perfect fidelity. Label accuracy measures the fraction of predictions where the extracted sentiment label matches the ground-truth label, independently of wording.
@@ -109,7 +109,7 @@ python benchmarks/quant_bench.py --examples 20 --adapter /path/to/my-adapter
 # Serve locally at http://localhost:8080 (Apple Silicon / mlx-lm)
 make serve
 
-# Serve merged model (no adapter overhead) — run 'make merge' first
+# Serve merged model (no adapter overhead, run 'make merge' first)
 make serve-merged
 
 # Serve ECS-compatible backend (transformers + PEFT; MOCK_MODE avoids loading weights)
@@ -175,10 +175,10 @@ ROUGE-L of 0.970 is high because the target format is short and structured. The 
 `eval/eval.py` accepts CLI arguments so it can be pointed at any JSONL file without editing source:
 
 ```bash
-# Default — evaluates on data/valid.jsonl
+# Default: evaluates on data/valid.jsonl
 make eval
 
-# Bundled OOD fixture (earnings calls, 10-K filings) — no extra data needed
+# Bundled OOD fixture (earnings calls, 10-K filings), no extra data needed
 make eval-ood
 # Equivalent: python eval/eval.py --data data/ood_sample.jsonl --n 10 --no-gate
 
