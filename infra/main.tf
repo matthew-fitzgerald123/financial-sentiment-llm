@@ -17,7 +17,7 @@ provider "aws" {
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
-  tags = { Name = "${var.project}-vpc" }
+  tags                 = { Name = "${var.project}-vpc" }
 }
 
 resource "aws_subnet" "public" {
@@ -26,7 +26,7 @@ resource "aws_subnet" "public" {
   cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
   availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
-  tags = { Name = "${var.project}-public-${count.index}" }
+  tags                    = { Name = "${var.project}-public-${count.index}" }
 }
 
 data "aws_availability_zones" "available" {}
@@ -275,8 +275,8 @@ resource "aws_ecs_task_definition" "api" {
   execution_role_arn       = aws_iam_role.ecs_task_execution.arn
 
   container_definitions = jsonencode([{
-    name  = "api"
-    image = "${aws_ecr_repository.api.repository_url}:latest"
+    name         = "api"
+    image        = "${aws_ecr_repository.api.repository_url}:latest"
     portMappings = [{ containerPort = 8080, protocol = "tcp" }]
     environment = [
       { name = "MODEL_VERSION", value = var.model_version }
