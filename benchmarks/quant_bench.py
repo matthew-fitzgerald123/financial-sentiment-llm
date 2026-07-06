@@ -12,7 +12,8 @@ baseline. For each configuration we record:
 Usage:
     python benchmarks/quant_bench.py [--examples N] [--max-tokens N] [--output PATH] [--adapter PATH] [--data PATH]
 
-Results saved to benchmarks/bench_results.json and printed as a table.
+Results saved to benchmarks/bench_results.json, printed as a table, and
+logged to the MLflow experiment 'mistral-finance-mlx-lora'.
 """
 
 import argparse
@@ -20,6 +21,7 @@ import json
 import time
 from pathlib import Path
 
+import mlflow
 import mlx.core as mx
 from mlx_lm import generate, load
 from rouge_score import rouge_scorer
@@ -91,6 +93,33 @@ def run_benchmark(model, tokenizer, examples, max_tokens):
     }
 
 
+def config_metric_prefix(scale):
+    """Turn a result's scale into an MLflow-metric-safe key prefix."""
+    if scale is None:
+        return "baseline"
+    return f"scale_{scale:.2f}".replace(".", "_")
+
+
+def log_to_mlflow(results, args):
+    mlflow.set_experiment("mistral-finance-mlx-lora")
+    with mlflow.start_run(run_name="benchmark"):
+        mlflow.set_tag("run_type", "benchmark")
+        mlflow.log_param("num_examples", args.examples)
+        mlflow.log_param("max_tokens", args.max_tokens)
+        mlflow.log_param("adapter_path", args.adapter)
+        mlflow.log_param("data_path", args.data)
+
+        metrics = {}
+        for r in results:
+            prefix = config_metric_prefix(r["scale"])
+            metrics[f"{prefix}_tps_median"] = r["tps_median"]
+            metrics[f"{prefix}_tps_mean"] = r["tps_mean"]
+            metrics[f"{prefix}_rougeL_mean"] = r["rougeL_mean"]
+        mlflow.log_metrics(metrics)
+
+        mlflow.log_artifact(args.output)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--examples", type=int, default=10)
@@ -140,6 +169,8 @@ def main():
     with open(args.output, "w") as f:
         json.dump(results, f, indent=2)
 
+    log_to_mlflow(results, args)
+
     # --- Print table ---
     print(f"\n{'Configuration':<30} {'Scale':>8} {'Tok/s':>8} {'ROUGE-L':>8}")
     print("-" * 58)
@@ -148,6 +179,7 @@ def main():
         print(f"{r['config']:<30} {scale_str:>8} {r['tps_median']:>8.1f} {r['rougeL_mean']:>8.3f}")
 
     print(f"\nFull results → {args.output}")
+    print("Metrics logged to MLflow experiment 'mistral-finance-mlx-lora'")
 
 
 if __name__ == "__main__":
