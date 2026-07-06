@@ -2,6 +2,7 @@
 Unit tests for benchmarks/quant_bench.py pure utility functions.
 No model weights or Apple Silicon required.
 """
+import argparse
 import json
 import importlib.util
 from pathlib import Path
@@ -18,6 +19,13 @@ _spec = importlib.util.spec_from_file_location(
 )
 _bench = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_bench)
+
+
+def _mlflow_ctx():
+    ctx = MagicMock()
+    ctx.__enter__ = MagicMock(return_value=MagicMock())
+    ctx.__exit__ = MagicMock(return_value=False)
+    return ctx
 
 
 # ---------------------------------------------------------------------------
@@ -277,6 +285,12 @@ def _run_main(results_p, extra_argv=None):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale"),
         patch.object(_bench, "restore_adapter_scale"),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch.object(_bench, "RESULTS_PATH", str(results_p)),
         patch("sys.argv", argv),
     ):
@@ -345,6 +359,12 @@ def test_main_calls_restore_adapter_scale_per_multiplier(tmp_path):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale"),
         patch.object(_bench, "restore_adapter_scale") as mock_restore,
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch.object(_bench, "RESULTS_PATH", str(results_p)),
         patch("sys.argv", argv),
     ):
@@ -362,6 +382,12 @@ def test_main_calls_load_for_baseline_and_each_sweep(tmp_path):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale"),
         patch.object(_bench, "restore_adapter_scale"),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch.object(_bench, "RESULTS_PATH", str(results_p)),
         patch("sys.argv", argv),
     ):
@@ -379,6 +405,12 @@ def test_main_baseline_load_has_no_adapter(tmp_path):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale"),
         patch.object(_bench, "restore_adapter_scale"),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch.object(_bench, "RESULTS_PATH", str(results_p)),
         patch("sys.argv", argv),
     ):
@@ -397,6 +429,12 @@ def test_main_sweep_loads_use_adapter_path(tmp_path):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale"),
         patch.object(_bench, "restore_adapter_scale"),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch.object(_bench, "RESULTS_PATH", str(results_p)),
         patch("sys.argv", argv),
     ):
@@ -417,6 +455,12 @@ def test_main_custom_adapter_flag_passed_to_load(tmp_path):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale"),
         patch.object(_bench, "restore_adapter_scale"),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch.object(_bench, "RESULTS_PATH", str(results_p)),
         patch("sys.argv", argv),
     ):
@@ -438,6 +482,12 @@ def test_main_custom_adapter_flag_passed_to_set_adapter_scale(tmp_path):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale") as mock_set,
         patch.object(_bench, "restore_adapter_scale"),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch.object(_bench, "RESULTS_PATH", str(results_p)),
         patch("sys.argv", argv),
     ):
@@ -457,6 +507,12 @@ def test_main_custom_adapter_flag_passed_to_restore_adapter_scale(tmp_path):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale"),
         patch.object(_bench, "restore_adapter_scale") as mock_restore,
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch.object(_bench, "RESULTS_PATH", str(results_p)),
         patch("sys.argv", argv),
     ):
@@ -475,6 +531,12 @@ def test_main_default_adapter_equals_constant(tmp_path):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale"),
         patch.object(_bench, "restore_adapter_scale"),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch.object(_bench, "RESULTS_PATH", str(results_p)),
         patch("sys.argv", argv),
     ):
@@ -496,6 +558,12 @@ def _run_main_custom_output(output_p, extra_argv=None):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale"),
         patch.object(_bench, "restore_adapter_scale"),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch("sys.argv", argv),
     ):
         _bench.main()
@@ -534,6 +602,12 @@ def test_output_arg_does_not_write_to_results_path(tmp_path):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale"),
         patch.object(_bench, "restore_adapter_scale"),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch.object(_bench, "RESULTS_PATH", str(default_p)),
         patch("sys.argv", argv),
     ):
@@ -562,6 +636,12 @@ def _run_main_capture_load_examples(results_p, extra_argv=None):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale"),
         patch.object(_bench, "restore_adapter_scale"),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch.object(_bench, "RESULTS_PATH", str(results_p)),
         patch("sys.argv", argv),
     ):
@@ -602,6 +682,12 @@ def test_main_custom_data_preserves_examples_count(tmp_path):
         patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
         patch.object(_bench, "set_adapter_scale"),
         patch.object(_bench, "restore_adapter_scale"),
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
         patch.object(_bench, "RESULTS_PATH", str(results_p)),
         patch("sys.argv", argv),
     ):
@@ -617,3 +703,116 @@ def test_main_custom_data_results_still_written(tmp_path):
     data = json.loads(results_p.read_text())
     assert isinstance(data, list)
     assert len(data) == 1 + len(_bench.SCALE_MULTIPLIERS)
+
+
+# ---------------------------------------------------------------------------
+# config_metric_prefix
+# ---------------------------------------------------------------------------
+
+def test_config_metric_prefix_baseline_is_none_scale():
+    assert _bench.config_metric_prefix(None) == "baseline"
+
+
+def test_config_metric_prefix_formats_scale():
+    assert _bench.config_metric_prefix(10.0) == "scale_10_00"
+
+
+def test_config_metric_prefix_unique_per_scale():
+    prefixes = {_bench.config_metric_prefix(s) for s in [2.5, 5.0, 10.0, 20.0, 40.0]}
+    assert len(prefixes) == 5
+
+
+# ---------------------------------------------------------------------------
+# log_to_mlflow
+# ---------------------------------------------------------------------------
+
+_LOG_RESULTS = [
+    {"config": "base (no adapter)", "scale": None, "tps_median": 40.0, "tps_mean": 39.0, "rougeL_mean": 0.1},
+    {"config": "LoRA scale=10.0 (1.0x)", "scale": 10.0, "tps_median": 35.0, "tps_mean": 34.0, "rougeL_mean": 0.97},
+]
+
+
+def _make_args(**overrides):
+    args = argparse.Namespace(
+        examples=10, max_tokens=64, output="./benchmarks/bench_results.json",
+        adapter="./mistral-finetuned", data="./data/valid.jsonl",
+    )
+    for k, v in overrides.items():
+        setattr(args, k, v)
+    return args
+
+
+def test_log_to_mlflow_sets_experiment():
+    with (
+        patch("mlflow.set_experiment") as mock_set_exp,
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
+    ):
+        _bench.log_to_mlflow(_LOG_RESULTS, _make_args())
+    mock_set_exp.assert_called_once_with("mistral-finance-mlx-lora")
+
+
+def test_log_to_mlflow_logs_metrics_per_config():
+    with (
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics") as mock_log_metrics,
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact"),
+    ):
+        _bench.log_to_mlflow(_LOG_RESULTS, _make_args())
+    logged = mock_log_metrics.call_args[0][0]
+    assert logged["baseline_rougeL_mean"] == pytest.approx(0.1)
+    assert logged["scale_10_00_rougeL_mean"] == pytest.approx(0.97)
+
+
+def test_log_to_mlflow_logs_adapter_and_data_params():
+    with (
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param") as mock_log_param,
+        patch("mlflow.log_artifact"),
+    ):
+        _bench.log_to_mlflow(_LOG_RESULTS, _make_args(adapter="/custom/adapter", data="/custom/data.jsonl"))
+    logged_params = {c.args[0]: c.args[1] for c in mock_log_param.call_args_list}
+    assert logged_params["adapter_path"] == "/custom/adapter"
+    assert logged_params["data_path"] == "/custom/data.jsonl"
+
+
+def test_log_to_mlflow_logs_output_artifact():
+    with (
+        patch("mlflow.set_experiment"),
+        patch("mlflow.start_run", return_value=_mlflow_ctx()),
+        patch("mlflow.set_tag"),
+        patch("mlflow.log_metrics"),
+        patch("mlflow.log_param"),
+        patch("mlflow.log_artifact") as mock_log_artifact,
+    ):
+        _bench.log_to_mlflow(_LOG_RESULTS, _make_args(output="/tmp/bench.json"))
+    mock_log_artifact.assert_called_once_with("/tmp/bench.json")
+
+
+def test_main_calls_log_to_mlflow(tmp_path):
+    """main() must invoke log_to_mlflow after writing results."""
+    results_p = tmp_path / "bench_results.json"
+    argv = ["quant_bench.py"]
+    with (
+        patch.object(_bench, "load_examples", return_value=_MAIN_EXAMPLES),
+        patch.object(_bench, "load", return_value=(MagicMock(), MagicMock())),
+        patch.object(_bench, "run_benchmark", return_value=_MOCK_STATS),
+        patch.object(_bench, "set_adapter_scale"),
+        patch.object(_bench, "restore_adapter_scale"),
+        patch.object(_bench, "log_to_mlflow") as mock_log,
+        patch.object(_bench, "RESULTS_PATH", str(results_p)),
+        patch("sys.argv", argv),
+    ):
+        _bench.main()
+    mock_log.assert_called_once()
+    logged_results = mock_log.call_args[0][0]
+    assert len(logged_results) == 1 + len(_bench.SCALE_MULTIPLIERS)

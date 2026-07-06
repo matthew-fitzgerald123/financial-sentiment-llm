@@ -205,6 +205,8 @@ python eval/eval.py \
 
 Full per-example results in `eval/results.json` after running `make eval`. Aggregate metrics (ROUGE-1, ROUGE-L, label accuracy for both models) and gate-passed boolean flags (`ft_rougeL_gate_passed`, `label_accuracy_gate_passed`) are saved to `eval/summary.json`; the CI gate reads the pre-computed flags directly from the artifact so threshold logic lives in exactly one place (`eval/eval.py`). All metrics and the gate result are also logged to the MLflow experiment `mistral-finance-mlx-lora`.
 
+`benchmarks/quant_bench.py` logs the same way: tok/s and ROUGE-L for the baseline and every LoRA scale multiplier are recorded as MLflow metrics (one run per `make benchmark` invocation, tagged `run_type=benchmark`), alongside the adapter path, data path, and example/token-count params, with `bench_results.json` attached as a run artifact.
+
 ## What I'd Do Next
 
 - **Richer output**: ✓ response now includes `label` and `explanation` fields parsed from structured model output
