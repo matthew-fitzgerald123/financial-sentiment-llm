@@ -1,4 +1,4 @@
-.PHONY: install prepare train eval eval-ood mlflow serve serve-merged serve-ecs serve-vllm merge benchmark benchmark-ood test
+.PHONY: install prepare train eval eval-ood mlflow serve serve-merged serve-ecs serve-vllm merge benchmark benchmark-ood test terraform-validate
 
 install:
 	pip install -r requirements.txt
@@ -49,3 +49,9 @@ benchmark:
 # Benchmark on bundled OOD fixture (earnings calls, 10-K filings) — saves to a separate file
 benchmark-ood:
 	python benchmarks/quant_bench.py --data data/ood_sample.jsonl --examples 10 --output benchmarks/bench_results_ood.json
+
+# Check Terraform formatting and validate config (no AWS credentials required)
+terraform-validate:
+	cd infra && terraform fmt -check -recursive -diff
+	cd infra && terraform init -backend=false -input=false
+	cd infra && terraform validate

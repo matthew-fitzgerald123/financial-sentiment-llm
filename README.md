@@ -2,6 +2,7 @@
 
 [![Eval](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/eval.yml/badge.svg)](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/eval.yml)
 [![Tests](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/test.yml/badge.svg)](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/test.yml)
+[![Terraform](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/terraform.yml/badge.svg)](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/terraform.yml)
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![Platform](https://img.shields.io/badge/platform-Apple%20Silicon-black)
 
@@ -59,7 +60,7 @@ flowchart TD
 - **Dataset**: [nickmuchi/financial-classification](https://huggingface.co/datasets/nickmuchi/financial-classification) (4,551 train / 506 test)
 - **Tracking**: MLflow
 - **Serving**: FastAPI + uvicorn
-- **Infra**: Docker · AWS ECS EC2 (g4dn.xlarge, NVIDIA T4) · Terraform · GitHub Actions
+- **Infra**: Docker · AWS ECS EC2 (g4dn.xlarge, NVIDIA T4) · Terraform (fmt + validate gated in CI) · GitHub Actions
 
 ## Model Card
 
@@ -122,6 +123,9 @@ MOCK_MODE=true make serve-vllm
 
 # Serve the ECS-compatible backend in Docker (requires a trained adapter)
 docker compose up --build
+
+# Check Terraform formatting and validate the infra/ config (no AWS credentials needed)
+make terraform-validate
 ```
 
 ## Inference
