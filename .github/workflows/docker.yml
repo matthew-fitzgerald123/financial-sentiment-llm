@@ -1,0 +1,64 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "app/**"
+      - "docker-compose.yml"
+      - ".github/workflows/docker.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "app/**"
+      - "docker-compose.yml"
+      - ".github/workflows/docker.yml"
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The trained LoRA adapter is gitignored (40MB, produced by `make train`),
+      # but the Dockerfile COPYs mistral-finetuned/ unconditionally. An empty
+      # placeholder satisfies the COPY; MOCK_MODE below skips loading it.
+      - name: Create placeholder adapter directory
+        run: mkdir -p mistral-finetuned && touch mistral-finetuned/.gitkeep
+
+      - name: Build image
+        run: docker build -t financial-sentiment-llm:ci .
+
+      - name: Run container in MOCK_MODE
+        run: |
+          docker run -d --name api -p 8080:8080 -e MOCK_MODE=true financial-sentiment-llm:ci
+
+      - name: Wait for container to become healthy
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Container did not become healthy in time"
+          docker logs api
+          exit 1
+
+      - name: Smoke test /model/info and /predict
+        run: |
+          curl -sf http://localhost:8080/model/info
+          curl -sf -X POST http://localhost:8080/predict \
+            -H "Content-Type: application/json" \
+            -d '{"question": "Classify the sentiment: \"Operating margins expanded by 300 basis points.\""}'
+
+      - name: Print container logs
+        if: always()
+        run: docker logs api
+
+      - name: Stop and remove container
+        if: always()
+        run: docker rm -f api
