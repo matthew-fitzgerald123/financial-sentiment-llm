@@ -84,6 +84,16 @@ def test_predict_respects_max_tokens(client):
     assert "answer" in r.json()
 
 
+@pytest.mark.parametrize("max_tokens", [0, -1, 2049])
+def test_predict_rejects_out_of_range_max_tokens(client, max_tokens):
+    """max_tokens must be a positive integer within the allowed cap."""
+    r = client.post(
+        "/predict",
+        json={"question": "Classify: 'Revenue rose 12%.'", "max_tokens": max_tokens},
+    )
+    assert r.status_code == 422
+
+
 def test_predict_stream_done_event(client):
     """Streaming endpoint should always emit the [DONE] sentinel."""
     with patch("app.main.stream_generate", return_value=iter([])):

@@ -79,6 +79,16 @@ def test_predict_label_is_positive_in_mock_mode(client):
     assert r.json()["label"] == "positive"
 
 
+@pytest.mark.parametrize("max_tokens", [0, -1, 2049])
+def test_predict_rejects_out_of_range_max_tokens(client, max_tokens):
+    """max_tokens must be a positive integer within the allowed cap."""
+    r = client.post(
+        "/predict",
+        json={"question": "Classify: 'Revenue rose 12%.'", "max_tokens": max_tokens},
+    )
+    assert r.status_code == 422
+
+
 def test_predict_answer_non_empty(client):
     r = client.post("/predict", json={"question": "Classify this."})
     assert len(r.json()["answer"]) > 0
