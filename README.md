@@ -3,6 +3,7 @@
 [![Eval](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/eval.yml/badge.svg)](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/eval.yml)
 [![Tests](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/test.yml/badge.svg)](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/test.yml)
 [![Terraform](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/terraform.yml/badge.svg)](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/terraform.yml)
+[![Docker](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/docker.yml/badge.svg)](https://github.com/matthew-fitzgerald123/financial-sentiment-llm/actions/workflows/docker.yml)
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![Platform](https://img.shields.io/badge/platform-Apple%20Silicon-black)
 
@@ -60,7 +61,7 @@ flowchart TD
 - **Dataset**: [nickmuchi/financial-classification](https://huggingface.co/datasets/nickmuchi/financial-classification) (4,551 train / 506 test)
 - **Tracking**: MLflow
 - **Serving**: FastAPI + uvicorn
-- **Infra**: Docker · AWS ECS EC2 (g4dn.xlarge, NVIDIA T4) · Terraform (fmt + validate gated in CI) · GitHub Actions
+- **Infra**: Docker (build + smoke-test gated in CI) · AWS ECS EC2 (g4dn.xlarge, NVIDIA T4) · Terraform (fmt + validate gated in CI) · GitHub Actions
 
 ## Model Card
 
