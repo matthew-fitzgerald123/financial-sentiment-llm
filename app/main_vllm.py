@@ -10,6 +10,7 @@ Backends by target environment:
 MOCK_MODE=true skips engine init for CI / infra validation.
 """
 import json
+import logging
 import os
 import uuid
 from contextlib import asynccontextmanager
@@ -18,7 +19,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.utils import parse_sentiment_explanation, parse_sentiment_label
+from app.utils import configure_logging, parse_sentiment_explanation, parse_sentiment_label
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 BASE_MODEL_ID = os.getenv("BASE_MODEL_ID", "mistralai/Mistral-7B-Instruct-v0.3")
 ADAPTER_PATH = os.getenv("ADAPTER_PATH", "./mistral-finetuned")
@@ -33,7 +37,7 @@ async def lifespan(app: FastAPI):
     global engine
     if MOCK_MODE:
         engine = {"mock": True}
-        print("MOCK_MODE enabled, skipping vLLM engine init")
+        logger.info("MOCK_MODE enabled, skipping vLLM engine init")
         yield
         return
 
@@ -73,6 +77,7 @@ def _build_prompt(question: str) -> str:
 @app.post("/predict", response_model=Response)
 async def predict(query: Query):
     if engine is None:
+        logger.warning("Rejecting /predict: engine not loaded")
         raise HTTPException(status_code=503, detail="Engine not loaded")
     if MOCK_MODE:
         answer = "Sentiment: positive. This statement reflects favorable financial conditions."
@@ -107,6 +112,7 @@ async def predict(query: Query):
 @app.post("/predict/stream")
 async def predict_stream(query: Query):
     if engine is None:
+        logger.warning("Rejecting /predict/stream: engine not loaded")
         raise HTTPException(status_code=503, detail="Engine not loaded")
 
     if MOCK_MODE:

@@ -1,4 +1,16 @@
+import logging
+import os
 import re
+
+
+def configure_logging() -> None:
+    """Configure the root logger once, level driven by LOG_LEVEL (default INFO)."""
+    level = os.getenv("LOG_LEVEL", "INFO").upper()
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+
 
 _LABEL_PATTERN = re.compile(r"Sentiment:\s*(positive|neutral|negative)", re.IGNORECASE)
 _EXPLANATION_PATTERN = re.compile(

@@ -5,6 +5,7 @@ Local Apple Silicon dev uses app/main.py (mlx-lm backend).
 """
 import asyncio
 import json
+import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -16,7 +17,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.utils import parse_sentiment_explanation, parse_sentiment_label
+from app.utils import configure_logging, parse_sentiment_explanation, parse_sentiment_label
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 BASE_MODEL_ID = os.getenv("BASE_MODEL_ID", "mistralai/Mistral-7B-Instruct-v0.3")
 ADAPTER_PATH = os.getenv("ADAPTER_PATH", "./mistral-finetuned")
@@ -37,7 +41,7 @@ async def lifespan(app: FastAPI):
     if MOCK_MODE:
         # Stub for infra validation / CI, no weights downloaded
         pipeline = {"model": None, "tokenizer": None}
-        print("MOCK_MODE enabled, skipping model load")
+        logger.info("MOCK_MODE enabled, skipping model load")
         yield
         return
 
@@ -55,9 +59,9 @@ async def lifespan(app: FastAPI):
 
     if Path(ADAPTER_PATH).exists():
         base = PeftModel.from_pretrained(base, ADAPTER_PATH)
-        print(f"Loaded adapter from {ADAPTER_PATH!r}")
+        logger.info("Loaded adapter from %r", ADAPTER_PATH)
     else:
-        print(f"No adapter at {ADAPTER_PATH!r}, using base model")
+        logger.warning("No adapter at %r, using base model", ADAPTER_PATH)
 
     pipeline = {"model": base, "tokenizer": tokenizer}
     yield
@@ -119,6 +123,7 @@ def _stream_into_queue(question: str, max_tokens: int, q: Queue, done: Event):
 @app.post("/predict", response_model=Response)
 async def predict(query: Query):
     if pipeline is None:
+        logger.warning("Rejecting /predict: model not loaded")
         raise HTTPException(status_code=503, detail="Model not loaded")
     loop = asyncio.get_event_loop()
     answer = await loop.run_in_executor(executor, _generate, query.question, query.max_tokens)
@@ -133,6 +138,7 @@ async def predict(query: Query):
 @app.post("/predict/stream")
 async def predict_stream(query: Query):
     if pipeline is None:
+        logger.warning("Rejecting /predict/stream: model not loaded")
         raise HTTPException(status_code=503, detail="Model not loaded")
     q: Queue = Queue()
     done = Event()

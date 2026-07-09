@@ -62,6 +62,7 @@ flowchart TD
 - **Tracking**: MLflow
 - **Serving**: FastAPI + uvicorn
 - **Infra**: Docker (build + smoke-test gated in CI) · AWS ECS EC2 (g4dn.xlarge, NVIDIA T4) · Terraform (fmt + validate gated in CI) · GitHub Actions
+- **Logging**: all three serving entrypoints emit structured logs (timestamp, level, logger, message) via the standard `logging` module; set `LOG_LEVEL` (default `INFO`) to control verbosity
 
 ## Model Card
 

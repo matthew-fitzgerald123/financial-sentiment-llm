@@ -256,3 +256,14 @@ def test_predict_stream_503_when_model_none(monkeypatch):
     c = TestClient(mlx_app, raise_server_exceptions=False)
     r = c.post("/predict/stream", json={"question": "Classify this."})
     assert r.status_code == 503
+
+
+def test_predict_503_logs_warning(monkeypatch, caplog):
+    """A rejected /predict call should be observable in the logs, not silent."""
+    import app.main as m
+    from app.main import app as mlx_app
+    monkeypatch.setattr(m, "model", None)
+    c = TestClient(mlx_app, raise_server_exceptions=False)
+    with caplog.at_level("WARNING", logger="app.main"):
+        c.post("/predict", json={"question": "Classify this."})
+    assert "model not loaded" in caplog.text.lower()
