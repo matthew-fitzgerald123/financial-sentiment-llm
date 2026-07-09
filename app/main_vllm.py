@@ -55,7 +55,7 @@ app = FastAPI(title="Financial Sentiment LLM API (vLLM)", lifespan=lifespan)
 
 class Query(BaseModel):
     question: str = Field(..., min_length=1)
-    max_tokens: int = 256
+    max_tokens: int = Field(256, gt=0, le=2048)
 
 
 class Response(BaseModel):
