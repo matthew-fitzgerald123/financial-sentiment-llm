@@ -187,6 +187,17 @@ def test_predict_stream_503_when_pipeline_none(monkeypatch):
     assert r.status_code == 503
 
 
+def test_predict_503_logs_warning(monkeypatch, caplog):
+    """A rejected /predict call should be observable in the logs, not silent."""
+    import app.main_ecs as m
+    from app.main_ecs import app as ecs_app
+    monkeypatch.setattr(m, "pipeline", None)
+    c = TestClient(ecs_app, raise_server_exceptions=False)
+    with caplog.at_level("WARNING", logger="app.main_ecs"):
+        c.post("/predict", json={"question": "Classify this."})
+    assert "model not loaded" in caplog.text.lower()
+
+
 def test_predict_stream_missing_question(client):
     """Missing question field on /predict/stream must be rejected with 422."""
     r = client.post("/predict/stream", json={})

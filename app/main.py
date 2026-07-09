@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -14,7 +15,10 @@ from mlx_lm import generate as mlx_generate
 from mlx_lm import stream_generate
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.utils import parse_sentiment_explanation, parse_sentiment_label
+from app.utils import configure_logging, parse_sentiment_explanation, parse_sentiment_label
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 MODEL_ID = os.getenv("BASE_MODEL_ID", "mlx-community/Mistral-7B-Instruct-v0.3-4bit")
 ADAPTER_PATH = os.getenv("ADAPTER_PATH", "./mistral-finetuned")
@@ -30,12 +34,12 @@ executor = ThreadPoolExecutor(max_workers=1)
 async def lifespan(app: FastAPI):
     global model, tokenizer
     if MERGED_MODEL_PATH and Path(MERGED_MODEL_PATH).exists():
-        print(f"Loading merged model from {MERGED_MODEL_PATH!r} (no adapter overhead)")
+        logger.info("Loading merged model from %r (no adapter overhead)", MERGED_MODEL_PATH)
         model, tokenizer = load(MERGED_MODEL_PATH)
     else:
         adapter = ADAPTER_PATH if Path(ADAPTER_PATH).exists() else None
         if adapter is None:
-            print(f"No adapter found at {ADAPTER_PATH!r}, loading base model only")
+            logger.warning("No adapter found at %r, loading base model only", ADAPTER_PATH)
         model, tokenizer = load(MODEL_ID, adapter_path=adapter)
     yield
 
@@ -73,6 +77,7 @@ def _stream_into_queue(question: str, max_tokens: int, q: Queue, done: Event):
 @app.post("/predict", response_model=Response)
 async def predict(query: Query):
     if model is None:
+        logger.warning("Rejecting /predict: model not loaded")
         raise HTTPException(status_code=503, detail="Model not loaded")
 
     loop = asyncio.get_event_loop()
@@ -89,6 +94,7 @@ async def predict(query: Query):
 async def predict_stream(query: Query):
     """SSE endpoint: streams tokens as they are generated."""
     if model is None:
+        logger.warning("Rejecting /predict/stream: model not loaded")
         raise HTTPException(status_code=503, detail="Model not loaded")
 
     q: Queue = Queue()

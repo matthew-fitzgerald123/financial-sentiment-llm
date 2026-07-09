@@ -168,6 +168,16 @@ def test_predict_stream_503_when_engine_none(monkeypatch):
     assert r.status_code == 503
 
 
+def test_predict_503_logs_warning(monkeypatch, caplog):
+    """A rejected /predict call should be observable in the logs, not silent."""
+    import app.main_vllm as m
+    monkeypatch.setattr(m, "engine", None)
+    c = TestClient(app, raise_server_exceptions=False)
+    with caplog.at_level("WARNING", logger="app.main_vllm"):
+        c.post("/predict", json={"question": "Classify this."})
+    assert "engine not loaded" in caplog.text.lower()
+
+
 # ---------------------------------------------------------------------------
 # _build_prompt
 # ---------------------------------------------------------------------------
