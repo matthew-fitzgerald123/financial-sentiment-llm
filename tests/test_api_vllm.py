@@ -104,6 +104,12 @@ def test_predict_empty_question(client):
     assert r.status_code == 422
 
 
+def test_predict_rejects_oversized_question(client):
+    """question longer than the allowed cap must be rejected with 422."""
+    r = client.post("/predict", json={"question": "x" * 4097})
+    assert r.status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # /predict/stream
 # ---------------------------------------------------------------------------
