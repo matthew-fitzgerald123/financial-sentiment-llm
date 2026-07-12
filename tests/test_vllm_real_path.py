@@ -307,3 +307,44 @@ def test_predict_stream_real_path_empty_question_rejected(monkeypatch):
     c = TestClient(app)
     r = c.post("/predict/stream", json={"question": ""})
     assert r.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# Generation failures — engine.generate raises
+# ---------------------------------------------------------------------------
+
+def _make_raising_engine():
+    """Return a mock engine whose .generate() raises instead of yielding."""
+    async def _raising_gen(*a, **kw):
+        raise RuntimeError("engine crashed")
+        yield  # pragma: no cover — unreachable, keeps this an async generator
+
+    engine = MagicMock()
+    engine.generate.side_effect = lambda *a, **kw: _raising_gen(*a, **kw)
+    return engine
+
+
+def test_predict_real_path_returns_500_when_engine_generate_raises(monkeypatch, caplog):
+    monkeypatch.setattr("app.main_vllm.MOCK_MODE", False)
+    monkeypatch.setattr("app.main_vllm.engine", _make_raising_engine())
+    c = TestClient(app, raise_server_exceptions=False)
+    with caplog.at_level("ERROR", logger="app.main_vllm"):
+        r = c.post("/predict", json={"question": "Classify this."})
+    assert r.status_code == 500
+    assert "inference failed" in r.json()["detail"].lower()
+    assert "inference failed" in caplog.text.lower()
+
+
+def test_predict_stream_real_path_emits_error_event_when_engine_generate_raises(monkeypatch, caplog):
+    monkeypatch.setattr("app.main_vllm.MOCK_MODE", False)
+    monkeypatch.setattr("app.main_vllm.engine", _make_raising_engine())
+    c = TestClient(app)
+    with caplog.at_level("ERROR", logger="app.main_vllm"):
+        r = c.post("/predict/stream", json={"question": "Classify this."})
+    assert r.status_code == 200
+    assert "data: [DONE]" in r.text
+    error_lines = [ln for ln in r.text.splitlines() if ln.startswith("data:") and '"error"' in ln]
+    assert len(error_lines) == 1
+    payload = json.loads(error_lines[0].removeprefix("data: "))
+    assert payload["error"] == "Inference failed"
+    assert "streaming generation failed" in caplog.text.lower()

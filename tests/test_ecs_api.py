@@ -279,3 +279,39 @@ def test_predict_stream_works_end_to_end_in_mock_mode():
     assert "data: [DONE]" in r.text
     lines = [ln for ln in r.text.splitlines() if ln.startswith("data:") and "[DONE]" not in ln]
     assert len(lines) > 0
+
+
+# ---------------------------------------------------------------------------
+# Generation failures
+# ---------------------------------------------------------------------------
+
+def test_predict_returns_500_when_generation_raises(client, caplog):
+    """A model generation error must surface as a 500, not an unhandled traceback."""
+    with patch("app.main_ecs._generate", side_effect=RuntimeError("boom")):
+        with caplog.at_level("ERROR", logger="app.main_ecs"):
+            r = client.post("/predict", json={"question": "Classify this."})
+    assert r.status_code == 500
+    assert "inference failed" in r.json()["detail"].lower()
+    assert "inference failed" in caplog.text.lower()
+
+
+def test_predict_stream_emits_error_event_on_stream_error_sentinel(client):
+    """When _stream_into_queue reports a StreamError, the SSE loop must surface an error event."""
+    from app.utils import StreamError
+
+    def _emit_error(question, max_tokens, q, done):
+        q.put(StreamError("Inference failed"))
+        done.set()
+
+    with patch("app.main_ecs._stream_into_queue", side_effect=_emit_error):
+        r = client.post(
+            "/predict/stream",
+            json={"question": "Classify: 'Revenue fell.'"},
+        )
+
+    assert r.status_code == 200
+    assert "data: [DONE]" in r.text
+    error_lines = [ln for ln in r.text.splitlines() if ln.startswith("data:") and '"error"' in ln]
+    assert len(error_lines) == 1
+    payload = json.loads(error_lines[0].removeprefix("data: "))
+    assert payload["error"] == "Inference failed"

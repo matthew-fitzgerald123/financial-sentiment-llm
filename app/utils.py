@@ -3,6 +3,13 @@ import os
 import re
 
 
+class StreamError:
+    """Sentinel put on a token queue to signal that generation failed mid-stream."""
+
+    def __init__(self, message: str):
+        self.message = message
+
+
 def configure_logging() -> None:
     """Configure the root logger once, level driven by LOG_LEVEL (default INFO)."""
     level = os.getenv("LOG_LEVEL", "INFO").upper()

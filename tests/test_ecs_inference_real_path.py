@@ -211,6 +211,59 @@ class TestStreamIntoQueueRealPath:
         assert kwargs["do_sample"] is False
 
 
+class _RaisingStreamer:
+    """Stand-in for TextIteratorStreamer whose iteration raises mid-stream."""
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __iter__(self):
+        yield "Sentiment:"
+        raise RuntimeError("generation crashed")
+
+
+class TestStreamIntoQueueRealPathError:
+    """If the underlying streamer raises, the exception must not be swallowed."""
+
+    def _call(self, monkeypatch):
+        import app.main_ecs as m
+        p = _make_pipeline()
+        monkeypatch.setattr(m, "MOCK_MODE", False)
+        monkeypatch.setattr(m, "pipeline", p)
+
+        q: Queue = Queue()
+        done = Event()
+
+        mock_tf = _fake_transformers({"TextIteratorStreamer": _RaisingStreamer})
+
+        with patch.dict(sys.modules, {"transformers": mock_tf}):
+            t = threading.Thread(
+                target=m._stream_into_queue, args=("Classify this.", 64, q, done)
+            )
+            t.start()
+            t.join(timeout=5.0)
+
+        return q, done
+
+    def test_done_event_still_set_after_error(self, monkeypatch):
+        _, done = self._call(monkeypatch)
+        assert done.is_set()
+
+    def test_stream_error_sentinel_queued(self, monkeypatch):
+        from app.utils import StreamError
+
+        q, _ = self._call(monkeypatch)
+        items = list(q.queue)
+        assert items[0] == "Sentiment:"
+        assert isinstance(items[-1], StreamError)
+        assert items[-1].message == "Inference failed"
+
+    def test_failure_is_logged(self, monkeypatch, caplog):
+        with caplog.at_level("ERROR", logger="app.main_ecs"):
+            self._call(monkeypatch)
+        assert "streaming generation failed" in caplog.text.lower()
+
+
 # ---------------------------------------------------------------------------
 # lifespan — adapter-loading branches when MOCK_MODE=False
 # ---------------------------------------------------------------------------

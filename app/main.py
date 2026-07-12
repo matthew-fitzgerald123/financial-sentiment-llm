@@ -15,7 +15,12 @@ from mlx_lm import generate as mlx_generate
 from mlx_lm import stream_generate
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.utils import configure_logging, parse_sentiment_explanation, parse_sentiment_label
+from app.utils import (
+    StreamError,
+    configure_logging,
+    parse_sentiment_explanation,
+    parse_sentiment_label,
+)
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -70,6 +75,9 @@ def _stream_into_queue(question: str, max_tokens: int, q: Queue, done: Event):
     try:
         for chunk in stream_generate(model, tokenizer, prompt=prompt, max_tokens=max_tokens):
             q.put(chunk.text)
+    except Exception:
+        logger.exception("Streaming generation failed")
+        q.put(StreamError("Inference failed"))
     finally:
         done.set()
 
@@ -81,7 +89,11 @@ async def predict(query: Query):
         raise HTTPException(status_code=503, detail="Model not loaded")
 
     loop = asyncio.get_event_loop()
-    answer = await loop.run_in_executor(executor, _generate, query.question, query.max_tokens)
+    try:
+        answer = await loop.run_in_executor(executor, _generate, query.question, query.max_tokens)
+    except Exception:
+        logger.exception("Inference failed for /predict")
+        raise HTTPException(status_code=500, detail="Inference failed")
     return Response(
         answer=answer,
         label=parse_sentiment_label(answer),
@@ -105,11 +117,14 @@ async def predict_stream(query: Query):
         loop = asyncio.get_event_loop()
         while not (done.is_set() and q.empty()):
             try:
-                token = await loop.run_in_executor(None, q.get, True, 0.05)
-                payload = json.dumps({"token": token, "model_version": MODEL_VERSION})
-                yield f"data: {payload}\n\n"
+                item = await loop.run_in_executor(None, q.get, True, 0.05)
             except Empty:
                 continue
+            if isinstance(item, StreamError):
+                yield f"data: {json.dumps({'error': item.message, 'model_version': MODEL_VERSION})}\n\n"
+                break
+            payload = json.dumps({"token": item, "model_version": MODEL_VERSION})
+            yield f"data: {payload}\n\n"
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

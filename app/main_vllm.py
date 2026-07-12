@@ -96,10 +96,14 @@ async def predict(query: Query):
     request_id = str(uuid.uuid4())
 
     answer = ""
-    async for output in engine.generate(
-        _build_prompt(query.question), params, request_id, lora_request=lora_request
-    ):
-        answer = output.outputs[0].text
+    try:
+        async for output in engine.generate(
+            _build_prompt(query.question), params, request_id, lora_request=lora_request
+        ):
+            answer = output.outputs[0].text
+    except Exception:
+        logger.exception("Inference failed for /predict")
+        raise HTTPException(status_code=500, detail="Inference failed")
 
     return Response(
         answer=answer,
@@ -132,14 +136,18 @@ async def predict_stream(query: Query):
 
     async def event_generator():
         prev_len = 0
-        async for output in engine.generate(
-            _build_prompt(query.question), params, request_id, lora_request=lora_request
-        ):
-            new_text = output.outputs[0].text
-            token = new_text[prev_len:]
-            prev_len = len(new_text)
-            if token:
-                yield f"data: {json.dumps({'token': token, 'model_version': MODEL_VERSION})}\n\n"
+        try:
+            async for output in engine.generate(
+                _build_prompt(query.question), params, request_id, lora_request=lora_request
+            ):
+                new_text = output.outputs[0].text
+                token = new_text[prev_len:]
+                prev_len = len(new_text)
+                if token:
+                    yield f"data: {json.dumps({'token': token, 'model_version': MODEL_VERSION})}\n\n"
+        except Exception:
+            logger.exception("Streaming generation failed")
+            yield f"data: {json.dumps({'error': 'Inference failed', 'model_version': MODEL_VERSION})}\n\n"
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

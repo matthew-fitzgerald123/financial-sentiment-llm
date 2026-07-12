@@ -267,3 +267,43 @@ def test_predict_503_logs_warning(monkeypatch, caplog):
     with caplog.at_level("WARNING", logger="app.main"):
         c.post("/predict", json={"question": "Classify this."})
     assert "model not loaded" in caplog.text.lower()
+
+
+# ---------------------------------------------------------------------------
+# Generation failures
+# ---------------------------------------------------------------------------
+
+def test_predict_returns_500_when_generation_raises(client, caplog):
+    """A model generation error must surface as a 500, not an unhandled traceback."""
+    with patch("app.main.mlx_generate", side_effect=RuntimeError("boom")):
+        with caplog.at_level("ERROR", logger="app.main"):
+            r = client.post("/predict", json={"question": "Classify this."})
+    assert r.status_code == 500
+    assert "inference failed" in r.json()["detail"].lower()
+    assert "streaming generation failed" not in caplog.text.lower()
+    assert "inference failed" in caplog.text.lower()
+
+
+def test_predict_stream_emits_error_event_when_generation_raises(client, caplog):
+    """A mid-stream generation error must be reported to the client and logged, not swallowed."""
+
+    def _raising_stream(*args, **kwargs):
+        yield from ()
+        raise RuntimeError("boom")
+
+    with patch("app.main.stream_generate", side_effect=_raising_stream):
+        with caplog.at_level("ERROR", logger="app.main"):
+            r = client.post(
+                "/predict/stream",
+                json={"question": "Classify: 'Revenue fell.'"},
+            )
+
+    assert r.status_code == 200
+    assert "data: [DONE]" in r.text
+    error_lines = [
+        ln for ln in r.text.splitlines() if ln.startswith("data:") and '"error"' in ln
+    ]
+    assert len(error_lines) == 1
+    payload = json.loads(error_lines[0].removeprefix("data: "))
+    assert payload["error"] == "Inference failed"
+    assert "streaming generation failed" in caplog.text.lower()
