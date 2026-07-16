@@ -45,3 +45,9 @@ variable "gpu_count" {
   type        = number
   default     = 1
 }
+
+variable "alarm_email" {
+  description = "Email address to notify on CloudWatch alarms. Leave empty to skip the SNS email subscription."
+  type        = string
+  default     = ""
+}
