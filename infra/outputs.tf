@@ -12,3 +12,8 @@ output "ecs_cluster_name" {
   description = "ECS cluster name"
   value       = aws_ecs_cluster.main.name
 }
+
+output "alarms_topic_arn" {
+  description = "SNS topic ARN that CloudWatch alarms publish to"
+  value       = aws_sns_topic.alarms.arn
+}

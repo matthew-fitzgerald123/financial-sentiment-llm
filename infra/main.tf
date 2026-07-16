@@ -300,6 +300,99 @@ resource "aws_cloudwatch_log_group" "ecs" {
   retention_in_days = 7
 }
 
+# ---------- alarms ----------
+
+resource "aws_sns_topic" "alarms" {
+  name = "${var.project}-alarms"
+}
+
+resource "aws_sns_topic_subscription" "alarm_email" {
+  count     = var.alarm_email != "" ? 1 : 0
+  topic_arn = aws_sns_topic.alarms.arn
+  protocol  = "email"
+  endpoint  = var.alarm_email
+}
+
+resource "aws_cloudwatch_metric_alarm" "unhealthy_hosts" {
+  alarm_name          = "${var.project}-unhealthy-hosts"
+  alarm_description   = "One or more ECS tasks behind the ALB are failing health checks"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "UnHealthyHostCount"
+  namespace           = "AWS/ApplicationELB"
+  period              = 60
+  statistic           = "Average"
+  threshold           = 0
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    TargetGroup  = aws_lb_target_group.api.arn_suffix
+    LoadBalancer = aws_lb.main.arn_suffix
+  }
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+  ok_actions    = [aws_sns_topic.alarms.arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
+  alarm_name          = "${var.project}-alb-5xx"
+  alarm_description   = "Elevated rate of 5xx responses from the API"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "HTTPCode_Target_5XX_Count"
+  namespace           = "AWS/ApplicationELB"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 5
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    LoadBalancer = aws_lb.main.arn_suffix
+  }
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "ecs_cpu_high" {
+  alarm_name          = "${var.project}-ecs-cpu-high"
+  alarm_description   = "ECS service CPU utilization is sustained above 90%"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 3
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = 60
+  statistic           = "Average"
+  threshold           = 90
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ClusterName = aws_ecs_cluster.main.name
+    ServiceName = aws_ecs_service.api.name
+  }
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "ecs_memory_high" {
+  alarm_name          = "${var.project}-ecs-memory-high"
+  alarm_description   = "ECS service memory utilization is sustained above 90%"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 3
+  metric_name         = "MemoryUtilization"
+  namespace           = "AWS/ECS"
+  period              = 60
+  statistic           = "Average"
+  threshold           = 90
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    ClusterName = aws_ecs_cluster.main.name
+    ServiceName = aws_ecs_service.api.name
+  }
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+}
+
 resource "aws_ecs_service" "api" {
   name            = "${var.project}-svc"
   cluster         = aws_ecs_cluster.main.id
