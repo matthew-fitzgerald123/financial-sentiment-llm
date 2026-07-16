@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from mlx_lm import load
 from mlx_lm import generate as mlx_generate
 from mlx_lm import stream_generate
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.utils import configure_logging, parse_sentiment_explanation, parse_sentiment_label
 
@@ -50,6 +50,13 @@ app = FastAPI(title="Financial Sentiment LLM API", lifespan=lifespan)
 class Query(BaseModel):
     question: str = Field(..., min_length=1, max_length=4096)
     max_tokens: int = Field(256, gt=0, le=2048)
+
+    @field_validator("question")
+    @classmethod
+    def question_not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("question must not be blank")
+        return v
 
 
 class Response(BaseModel):
