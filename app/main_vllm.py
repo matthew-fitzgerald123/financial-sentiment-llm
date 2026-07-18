@@ -9,6 +9,7 @@ Backends by target environment:
 
 MOCK_MODE=true skips engine init for CI / infra validation.
 """
+import asyncio
 import json
 import logging
 import os
@@ -30,6 +31,7 @@ BASE_MODEL_ID = os.getenv("BASE_MODEL_ID", "mistralai/Mistral-7B-Instruct-v0.3")
 ADAPTER_PATH = os.getenv("ADAPTER_PATH", "./mistral-finetuned")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "mistral-7b-finance-mlx-lora-v1")
 MOCK_MODE = os.getenv("MOCK_MODE", "false").lower() == "true"
+GENERATION_TIMEOUT_SECONDS = float(os.getenv("GENERATION_TIMEOUT_SECONDS", "120"))
 
 engine = None
 
@@ -131,10 +133,21 @@ async def predict(query: Query):
 
     try:
         answer = ""
-        async for output in engine.generate(
+        gen = engine.generate(
             _build_prompt(query.question), params, request_id, lora_request=lora_request
-        ):
+        )
+        while True:
+            try:
+                output = await asyncio.wait_for(gen.__anext__(), timeout=GENERATION_TIMEOUT_SECONDS)
+            except StopAsyncIteration:
+                break
             answer = output.outputs[0].text
+    except asyncio.TimeoutError:
+        logger.error(
+            "predict request timed out request_id=%s after %.0fs",
+            request_id, GENERATION_TIMEOUT_SECONDS,
+        )
+        raise HTTPException(status_code=504, detail="Inference timed out") from None
     except Exception:
         logger.error("predict request failed request_id=%s", request_id, exc_info=True)
         raise HTTPException(status_code=500, detail="Generation failed") from None
@@ -183,18 +196,38 @@ async def predict_stream(query: Query):
     async def event_generator():
         try:
             prev_len = 0
-            async for output in engine.generate(
+            timed_out = False
+            gen = engine.generate(
                 _build_prompt(query.question), params, request_id, lora_request=lora_request
-            ):
+            )
+            while True:
+                try:
+                    output = await asyncio.wait_for(
+                        gen.__anext__(), timeout=GENERATION_TIMEOUT_SECONDS
+                    )
+                except StopAsyncIteration:
+                    break
+                except asyncio.TimeoutError:
+                    logger.error(
+                        "predict/stream request timed out request_id=%s after %.0fs",
+                        request_id, GENERATION_TIMEOUT_SECONDS,
+                    )
+                    payload = json.dumps(
+                        {"error": "Inference timed out", "model_version": MODEL_VERSION}
+                    )
+                    yield f"data: {payload}\n\n"
+                    timed_out = True
+                    break
                 new_text = output.outputs[0].text
                 token = new_text[prev_len:]
                 prev_len = len(new_text)
                 if token:
                     yield f"data: {json.dumps({'token': token, 'model_version': MODEL_VERSION})}\n\n"
-            logger.info(
-                "predict/stream request done request_id=%s latency_ms=%.1f",
-                request_id, (time.perf_counter() - start) * 1000,
-            )
+            if not timed_out:
+                logger.info(
+                    "predict/stream request done request_id=%s latency_ms=%.1f",
+                    request_id, (time.perf_counter() - start) * 1000,
+                )
         except Exception:
             logger.error("predict/stream request failed request_id=%s", request_id, exc_info=True)
         yield "data: [DONE]\n\n"

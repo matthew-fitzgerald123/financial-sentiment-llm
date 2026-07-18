@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 BASE_MODEL_ID = os.getenv("BASE_MODEL_ID", "mistralai/Mistral-7B-Instruct-v0.3")
 ADAPTER_PATH = os.getenv("ADAPTER_PATH", "./mistral-finetuned")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "mistral-7b-finance-mlx-lora-v1")
+GENERATION_TIMEOUT_SECONDS = float(os.getenv("GENERATION_TIMEOUT_SECONDS", "120"))
 
 pipeline = None
 executor = ThreadPoolExecutor(max_workers=1)
@@ -183,9 +184,18 @@ async def predict(query: Query):
     )
     loop = asyncio.get_event_loop()
     try:
-        answer = await loop.run_in_executor(
-            executor, _generate, query.question, query.max_tokens, query.adapter
+        answer = await asyncio.wait_for(
+            loop.run_in_executor(
+                executor, _generate, query.question, query.max_tokens, query.adapter
+            ),
+            timeout=GENERATION_TIMEOUT_SECONDS,
         )
+    except asyncio.TimeoutError:
+        logger.error(
+            "predict request timed out request_id=%s after %.0fs",
+            request_id, GENERATION_TIMEOUT_SECONDS,
+        )
+        raise HTTPException(status_code=504, detail="Inference timed out") from None
     except Exception:
         logger.error("predict request failed request_id=%s", request_id, exc_info=True)
         raise HTTPException(status_code=500, detail="Generation failed") from None
@@ -215,9 +225,19 @@ async def predict_stream(query: Query):
 
     async def event_generator():
         loop = asyncio.get_event_loop()
+        last_activity = loop.time()
         while not (done.is_set() and q.empty()):
+            if loop.time() - last_activity > GENERATION_TIMEOUT_SECONDS:
+                logger.error(
+                    "Streaming inference timed out for /predict/stream after %.0fs of inactivity",
+                    GENERATION_TIMEOUT_SECONDS,
+                )
+                payload = json.dumps({"error": "Inference timed out", "model_version": MODEL_VERSION})
+                yield f"data: {payload}\n\n"
+                break
             try:
                 token = await loop.run_in_executor(None, q.get, True, 0.05)
+                last_activity = loop.time()
                 yield f"data: {json.dumps({'token': token, 'model_version': MODEL_VERSION})}\n\n"
             except Empty:
                 continue

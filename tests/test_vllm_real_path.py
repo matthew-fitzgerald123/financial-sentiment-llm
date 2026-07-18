@@ -6,6 +6,7 @@ vLLM paths (engine.generate iteration, delta-token extraction, LoRA request
 construction) have no coverage there.  This file patches MOCK_MODE=False and
 stubs the vLLM AsyncLLMEngine so those paths can be exercised without a GPU.
 """
+import asyncio
 import json
 import os
 import sys
@@ -48,6 +49,18 @@ def _make_engine(*outputs):
     """Return a mock engine whose .generate() produces a fresh async generator per call."""
     engine = MagicMock()
     engine.generate.side_effect = lambda *a, **kw: _async_gen(*outputs)
+    return engine
+
+
+async def _stalling_gen(first_output, stall_seconds):
+    """Async generator that yields once, then stalls past a short timeout."""
+    yield first_output
+    await asyncio.sleep(stall_seconds)
+
+
+def _make_stalling_engine(first_output, stall_seconds=0.2):
+    engine = MagicMock()
+    engine.generate.side_effect = lambda *a, **kw: _stalling_gen(first_output, stall_seconds)
     return engine
 
 
@@ -325,3 +338,35 @@ def test_lifespan_logs_and_reraises_on_engine_init_failure(monkeypatch, caplog):
             with TestClient(app):
                 pass
     assert "failed to initialize vllm engine" in caplog.text.lower()
+
+
+# ---------------------------------------------------------------------------
+# Generation timeout
+# ---------------------------------------------------------------------------
+
+def test_predict_timeout_returns_504(monkeypatch):
+    monkeypatch.setattr("app.main_vllm.MOCK_MODE", False)
+    monkeypatch.setattr(
+        "app.main_vllm.engine",
+        _make_stalling_engine(_make_output("Sentiment")),
+    )
+    monkeypatch.setattr("app.main_vllm.GENERATION_TIMEOUT_SECONDS", 0.05)
+    c = TestClient(app, raise_server_exceptions=True)
+    r = c.post("/predict", json={"question": "Classify: 'Revenue rose.'"})
+    assert r.status_code == 504
+    assert "timed out" in r.json()["detail"].lower()
+
+
+def test_predict_stream_timeout_emits_error_event(monkeypatch):
+    monkeypatch.setattr("app.main_vllm.MOCK_MODE", False)
+    monkeypatch.setattr(
+        "app.main_vllm.engine",
+        _make_stalling_engine(_make_output("Sentiment")),
+    )
+    monkeypatch.setattr("app.main_vllm.GENERATION_TIMEOUT_SECONDS", 0.05)
+    c = TestClient(app)
+    r = c.post("/predict/stream", json={"question": "Classify: 'Revenue fell.'"})
+    assert r.status_code == 200
+    assert '"error"' in r.text
+    assert "timed out" in r.text.lower()
+    assert "data: [DONE]" in r.text
