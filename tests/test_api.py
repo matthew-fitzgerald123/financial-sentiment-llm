@@ -279,3 +279,14 @@ def test_predict_503_logs_warning(monkeypatch, caplog):
     with caplog.at_level("WARNING", logger="app.main"):
         c.post("/predict", json={"question": "Classify this."})
     assert "model not loaded" in caplog.text.lower()
+
+
+def test_lifespan_logs_and_reraises_on_load_failure(caplog):
+    """A model-load failure at startup must be logged with context, not swallowed."""
+    with patch("app.main.load", side_effect=RuntimeError("weights corrupted")):
+        from app.main import app as mlx_app
+        with caplog.at_level("ERROR", logger="app.main"):
+            with pytest.raises(RuntimeError, match="weights corrupted"):
+                with TestClient(mlx_app):
+                    pass
+    assert "failed to load model" in caplog.text.lower()

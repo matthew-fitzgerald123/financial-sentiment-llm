@@ -324,3 +324,28 @@ class TestLifespanAdapterBranches:
 
         assert r.status_code == 200
         assert r.json()["model_loaded"] is True
+
+    def test_load_failure_logs_and_reraises(self, tmp_path, monkeypatch, caplog):
+        """A model-load failure at startup must be logged with context, not swallowed."""
+        mock_causal_cls = MagicMock()
+        mock_causal_cls.from_pretrained.side_effect = RuntimeError("weights corrupted")
+        mock_tok_cls = MagicMock()
+        mock_peft_cls = MagicMock()
+
+        import app.main_ecs as m
+        monkeypatch.setattr(m, "MOCK_MODE", False)
+        monkeypatch.setattr(m, "ADAPTER_PATH", str(tmp_path / "no-adapter"))
+        monkeypatch.setattr(m, "pipeline", None)
+
+        fake_mods = {
+            "transformers": self._mock_tf(mock_causal_cls, mock_tok_cls),
+            "peft": self._mock_peft(mock_peft_cls),
+            "torch": self._mock_torch(),
+        }
+        with patch.dict(sys.modules, fake_mods):
+            with caplog.at_level("ERROR", logger="app.main_ecs"):
+                with pytest.raises(RuntimeError, match="weights corrupted"):
+                    with TestClient(m.app):
+                        pass
+
+        assert "failed to load model" in caplog.text.lower()
