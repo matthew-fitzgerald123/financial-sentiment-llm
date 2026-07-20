@@ -393,6 +393,37 @@ resource "aws_cloudwatch_metric_alarm" "ecs_memory_high" {
   alarm_actions = [aws_sns_topic.alarms.arn]
 }
 
+# Turns the app's structured ERROR-level log lines (model-load failures,
+# unhandled exceptions) into a metric, so failures that don't also trip the
+# ALB/ECS alarms above still page someone via the same SNS topic.
+resource "aws_cloudwatch_log_metric_filter" "app_errors" {
+  name           = "${var.project}-app-errors"
+  log_group_name = aws_cloudwatch_log_group.ecs.name
+  pattern        = "\" ERROR \""
+
+  metric_transformation {
+    name          = "AppErrorCount"
+    namespace     = "${var.project}/app"
+    value         = "1"
+    default_value = "0"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "app_errors" {
+  alarm_name          = "${var.project}-app-errors"
+  alarm_description   = "Application logged one or more ERROR-level entries (e.g. model load failure)"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = aws_cloudwatch_log_metric_filter.app_errors.metric_transformation[0].name
+  namespace           = aws_cloudwatch_log_metric_filter.app_errors.metric_transformation[0].namespace
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 0
+  treat_missing_data  = "notBreaching"
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+}
+
 resource "aws_ecs_service" "api" {
   name            = "${var.project}-svc"
   cluster         = aws_ecs_cluster.main.id
