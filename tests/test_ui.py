@@ -33,6 +33,19 @@ def test_index_targets_real_api_endpoints():
     assert "/health" in html
 
 
+def test_index_wraps_input_in_training_prompt_template():
+    """The UI must send input wrapped in the instruction template the adapter
+    was trained on (data/prepare.py), or the model drifts off-format."""
+    html = (STATIC_DIR / "index.html").read_text()
+    assert "Classify the sentiment of the following financial statement" in html
+
+
+def test_index_supports_light_and_dark_themes():
+    html = (STATIC_DIR / "index.html").read_text()
+    assert 'data-theme="light"' in html
+    assert "prefers-color-scheme" in html
+
+
 def test_all_entrypoints_mount_ui():
     """Each serving entrypoint must wire in the UI (checked at source level so
     this does not require transformers/vllm to be importable)."""
