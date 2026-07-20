@@ -374,3 +374,16 @@ def test_predict_stream_generation_failure_logs_error(client, caplog):
     error_lines = [rec for rec in caplog.records if "predict/stream request failed" in rec.message]
     assert len(error_lines) == 1
     assert error_lines[0].exc_info is not None
+
+
+def test_health_503_when_model_none(monkeypatch):
+    """/health must return 503 so the ALB/ECS health check detects a failed model load."""
+    import app.main as m
+    from app.main import app as mlx_app
+    monkeypatch.setattr(m, "model", None)
+    c = TestClient(mlx_app, raise_server_exceptions=False)
+    r = c.get("/health")
+    assert r.status_code == 503
+    data = r.json()
+    assert data["status"] == "unhealthy"
+    assert data["model_loaded"] is False

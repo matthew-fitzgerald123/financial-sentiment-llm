@@ -190,6 +190,18 @@ def test_predict_503_logs_warning(monkeypatch, caplog):
     assert "engine not loaded" in caplog.text.lower()
 
 
+def test_health_503_when_engine_none(monkeypatch):
+    """/health must return 503 so the ALB/ECS health check detects a failed engine load."""
+    import app.main_vllm as m
+    monkeypatch.setattr(m, "engine", None)
+    c = TestClient(app, raise_server_exceptions=False)
+    r = c.get("/health")
+    assert r.status_code == 503
+    data = r.json()
+    assert data["status"] == "unhealthy"
+    assert data["model_loaded"] is False
+
+
 # ---------------------------------------------------------------------------
 # _build_prompt
 # ---------------------------------------------------------------------------
