@@ -163,7 +163,7 @@ class TestStreamIntoQueueRealPath:
 
         with patch.dict(sys.modules, {"transformers": mock_tf}):
             t = threading.Thread(
-                target=m._stream_into_queue, args=(question, max_tokens, q, done)
+                target=m._stream_into_queue, args=(question, max_tokens, True, q, done)
             )
             t.start()
             t.join(timeout=5.0)

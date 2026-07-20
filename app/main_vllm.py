@@ -69,6 +69,7 @@ mount_ui(app)
 class Query(BaseModel):
     question: str = Field(..., min_length=1, max_length=4096)
     max_tokens: int = Field(256, gt=0, le=2048)
+    adapter: bool = Field(True, description="False generates with the raw base model")
 
     @field_validator("question")
     @classmethod
@@ -90,6 +91,13 @@ def _build_prompt(question: str) -> str:
     return f"<s>[INST] {question} [/INST]"
 
 
+def _lora_request(use_adapter: bool):
+    if not use_adapter:
+        return None
+    from vllm import LoRARequest
+    return LoRARequest("finance-lora", 1, ADAPTER_PATH) if os.path.exists(ADAPTER_PATH) else None
+
+
 @app.post("/predict", response_model=Response)
 async def predict(query: Query):
     if engine is None:
@@ -104,11 +112,9 @@ async def predict(query: Query):
             model_version=MODEL_VERSION,
         )
 
-    from vllm import SamplingParams, LoRARequest
+    from vllm import SamplingParams
     params = SamplingParams(temperature=0.0, max_tokens=query.max_tokens)
-    lora_request = (
-        LoRARequest("finance-lora", 1, ADAPTER_PATH) if os.path.exists(ADAPTER_PATH) else None
-    )
+    lora_request = _lora_request(query.adapter)
     request_id = str(uuid.uuid4())
 
     answer = ""
@@ -139,11 +145,9 @@ async def predict_stream(query: Query):
 
         return StreamingResponse(mock_generator(), media_type="text/event-stream")
 
-    from vllm import SamplingParams, LoRARequest
+    from vllm import SamplingParams
     params = SamplingParams(temperature=0.0, max_tokens=query.max_tokens)
-    lora_request = (
-        LoRARequest("finance-lora", 1, ADAPTER_PATH) if os.path.exists(ADAPTER_PATH) else None
-    )
+    lora_request = _lora_request(query.adapter)
     request_id = str(uuid.uuid4())
 
     async def event_generator():

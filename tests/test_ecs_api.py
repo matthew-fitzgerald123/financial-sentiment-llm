@@ -33,7 +33,7 @@ def client():
     the done Event so the SSE generator reaches its [DONE] sentinel.
     """
 
-    def _fake_stream(question, max_tokens, q, done):
+    def _fake_stream(question, max_tokens, use_adapter, q, done):
         done.set()
 
     with (
@@ -130,7 +130,7 @@ def test_predict_rejects_blank_question(client):
 def test_predict_stream_done_event(client):
     """Streaming endpoint must always emit the SSE [DONE] sentinel."""
 
-    def _fake_stream(question, max_tokens, q, done):
+    def _fake_stream(question, max_tokens, use_adapter, q, done):
         done.set()
 
     with patch("app.main_ecs._stream_into_queue", side_effect=_fake_stream):
@@ -147,7 +147,7 @@ def test_predict_stream_done_event(client):
 def test_predict_stream_token_format(client):
     """Tokens emitted before [DONE] must be valid JSON with 'token' and 'model_version'."""
 
-    def _emit_one_token(question, max_tokens, q, done):
+    def _emit_one_token(question, max_tokens, use_adapter, q, done):
         q.put("positive")
         done.set()
 
@@ -244,7 +244,7 @@ def test_stream_into_queue_sets_done_in_mock_mode():
 
     q = Queue()
     done = Event()
-    t = threading.Thread(target=_stream_into_queue, args=("Classify.", 64, q, done))
+    t = threading.Thread(target=_stream_into_queue, args=("Classify.", 64, True, q, done))
     t.start()
     t.join(timeout=2.0)
 
@@ -260,7 +260,7 @@ def test_stream_into_queue_emits_tokens_in_mock_mode():
 
     q = Queue()
     done = Event()
-    t = threading.Thread(target=_stream_into_queue, args=("Classify.", 64, q, done))
+    t = threading.Thread(target=_stream_into_queue, args=("Classify.", 64, True, q, done))
     t.start()
     t.join(timeout=2.0)
 
@@ -291,3 +291,14 @@ def test_predict_stream_works_end_to_end_in_mock_mode():
     assert "data: [DONE]" in r.text
     lines = [ln for ln in r.text.splitlines() if ln.startswith("data:") and "[DONE]" not in ln]
     assert len(lines) > 0
+
+
+def test_generate_mock_mode_base_response_differs():
+    """adapter=False in MOCK_MODE must return the verbose base-style canned answer."""
+    import app.main_ecs as m
+    with patch("app.main_ecs.MOCK_MODE", True):
+        tuned = m._generate("Classify.", 64, use_adapter=True)
+        base = m._generate("Classify.", 64, use_adapter=False)
+    assert tuned == m._MOCK_RESPONSE
+    assert base == m._MOCK_BASE_RESPONSE
+    assert tuned != base
