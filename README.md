@@ -134,7 +134,7 @@ make terraform-validate
 
 ## Web UI
 
-Every serving entrypoint serves a zero-dependency single-page UI at `/` (e.g. http://localhost:8080 after `make serve`). Input is wrapped client-side in the same instruction template the adapter was trained on (`data/prepare.py`) before being sent, keeping the model on-format. It streams tokens live from `/predict/stream`, detects the sentiment label mid-stream, and reports time-to-first-token, total latency, and tokens/sec per request, with a session history of past classifications and a sentiment distribution bar across that history. The page follows the system light/dark preference with a manual toggle (persisted to `localStorage`), and shows model metric tiles and a train → gate → serve pipeline summary alongside the classifier. It ships inside the Docker image, so the ECS deployment serves it behind the ALB with no extra infrastructure.
+Every serving entrypoint serves a zero-dependency single-page UI at `/` (e.g. http://localhost:8080 after `make serve`). Input is wrapped client-side in the same instruction template the adapter was trained on (`data/prepare.py`) before being sent, keeping the model on-format. It streams tokens live from `/predict/stream`, detects the sentiment label mid-stream, and reports time-to-first-token, total latency, and tokens/sec per request, with a session history of past classifications and a sentiment distribution bar across that history. The page follows the system light/dark preference live (no manual toggle), and shows headline eval metrics and a train → gate → serve pipeline summary alongside the classifier. It ships inside the Docker image, so the ECS deployment serves it behind the ALB with no extra infrastructure.
 
 ## Inference
 

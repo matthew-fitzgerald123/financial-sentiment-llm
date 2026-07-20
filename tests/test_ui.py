@@ -40,10 +40,13 @@ def test_index_wraps_input_in_training_prompt_template():
     assert "Classify the sentiment of the following financial statement" in html
 
 
-def test_index_supports_light_and_dark_themes():
+def test_index_follows_system_theme_with_no_manual_toggle():
+    """Theming must track the OS live via prefers-color-scheme only —
+    no toggle button and no stored override."""
     html = (STATIC_DIR / "index.html").read_text()
-    assert 'data-theme="light"' in html
     assert "prefers-color-scheme" in html
+    assert "theme-toggle" not in html
+    assert "localStorage" not in html
 
 
 def test_all_entrypoints_mount_ui():
