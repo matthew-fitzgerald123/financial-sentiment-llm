@@ -307,3 +307,21 @@ def test_predict_stream_real_path_empty_question_rejected(monkeypatch):
     c = TestClient(app)
     r = c.post("/predict/stream", json={"question": ""})
     assert r.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# lifespan — engine init failure
+# ---------------------------------------------------------------------------
+
+def test_lifespan_logs_and_reraises_on_engine_init_failure(monkeypatch, caplog):
+    """An engine-init failure at startup must be logged with context, not swallowed."""
+    monkeypatch.setattr("app.main_vllm.MOCK_MODE", False)
+    monkeypatch.setattr(
+        _vllm_stub.AsyncLLMEngine, "from_engine_args",
+        MagicMock(side_effect=RuntimeError("out of memory")),
+    )
+    with caplog.at_level("ERROR", logger="app.main_vllm"):
+        with pytest.raises(RuntimeError, match="out of memory"):
+            with TestClient(app):
+                pass
+    assert "failed to initialize vllm engine" in caplog.text.lower()

@@ -33,14 +33,21 @@ executor = ThreadPoolExecutor(max_workers=1)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model, tokenizer
-    if MERGED_MODEL_PATH and Path(MERGED_MODEL_PATH).exists():
-        logger.info("Loading merged model from %r (no adapter overhead)", MERGED_MODEL_PATH)
-        model, tokenizer = load(MERGED_MODEL_PATH)
-    else:
-        adapter = ADAPTER_PATH if Path(ADAPTER_PATH).exists() else None
-        if adapter is None:
-            logger.warning("No adapter found at %r, loading base model only", ADAPTER_PATH)
-        model, tokenizer = load(MODEL_ID, adapter_path=adapter)
+    try:
+        if MERGED_MODEL_PATH and Path(MERGED_MODEL_PATH).exists():
+            logger.info("Loading merged model from %r (no adapter overhead)", MERGED_MODEL_PATH)
+            model, tokenizer = load(MERGED_MODEL_PATH)
+        else:
+            adapter = ADAPTER_PATH if Path(ADAPTER_PATH).exists() else None
+            if adapter is None:
+                logger.warning("No adapter found at %r, loading base model only", ADAPTER_PATH)
+            model, tokenizer = load(MODEL_ID, adapter_path=adapter)
+    except Exception:
+        logger.error(
+            "Failed to load model %r (adapter_path=%r, merged_model_path=%r)",
+            MODEL_ID, ADAPTER_PATH, MERGED_MODEL_PATH, exc_info=True,
+        )
+        raise
     yield
 
 

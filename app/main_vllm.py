@@ -41,16 +41,23 @@ async def lifespan(app: FastAPI):
         yield
         return
 
-    from vllm import AsyncLLMEngine, AsyncEngineArgs
-    engine_args = AsyncEngineArgs(
-        model=BASE_MODEL_ID,
-        dtype="auto",
-        max_model_len=2048,
-        enable_lora=True,
-        max_loras=1,
-        max_lora_rank=8,
-    )
-    engine = AsyncLLMEngine.from_engine_args(engine_args)
+    try:
+        from vllm import AsyncLLMEngine, AsyncEngineArgs
+        engine_args = AsyncEngineArgs(
+            model=BASE_MODEL_ID,
+            dtype="auto",
+            max_model_len=2048,
+            enable_lora=True,
+            max_loras=1,
+            max_lora_rank=8,
+        )
+        engine = AsyncLLMEngine.from_engine_args(engine_args)
+    except Exception:
+        logger.error(
+            "Failed to initialize vLLM engine for model %r (adapter_path=%r)",
+            BASE_MODEL_ID, ADAPTER_PATH, exc_info=True,
+        )
+        raise
     yield
 
 
