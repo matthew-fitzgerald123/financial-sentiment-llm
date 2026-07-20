@@ -10,7 +10,7 @@
 Fine-tuned Mistral-7B for financial sentiment classification using LoRA on Apple Silicon. Exposes a FastAPI service with both batch and SSE streaming inference plus a built-in streaming web UI, containerised with Docker, deployed to AWS ECS via Terraform, and gated by a CI eval pipeline on every push.
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Duel mode: the LoRA fine-tune locks a structured sentiment label in about a second while base Mistral-7B streams a verbose off-format answer" width="820" />
+  <img src="docs/demo.gif" alt="Duel mode: the LoRA fine-tune locks a structured sentiment label in under a second, while base Mistral-7B reads the tone correctly but answers in verbose prose the parser scores as unparseable" width="820" />
   <br />
   <em>Duel mode — same prompt, fine-tune vs raw base model, streamed live.</em>
 </p>
@@ -143,7 +143,7 @@ make terraform-validate
 Every serving entrypoint serves a zero-dependency single-page UI at `/` (e.g. http://localhost:8080 after `make serve`) with three modes:
 
 - **Classify** — stream one statement's classification token by token, with the label detected mid-stream, the parsed verdict surfaced above the raw stream, and per-request time-to-first-token / total latency / tokens-per-sec.
-- **Duel** — send the same prompt to the fine-tune and to the raw base model side by side (`adapter: false` on the API). The fine-tune locks a structured `Sentiment:` label in a handful of tokens; the base model typically rambles off-format — the value of the 40 MB adapter, made visible.
+- **Duel** — send the same prompt to the fine-tune and to the raw base model side by side (`adapter: false` on the API). The base 7B usually reads the tone correctly, but answers in verbose prose the production parser scores as `unknown` every time; the fine-tune emits a locked `Sentiment:` schema in ~17 tokens instead of ~100+. That schema is what makes label accuracy measurable (0.95), eval-gateable in CI, and cheap at scale — the value of the 40 MB adapter, made visible.
 - **Tape** — paste several headlines (one per line) and get a per-line label plus an aggregate bullish / bearish / mixed market-mood readout with a sentiment distribution bar.
 
 Input is wrapped client-side in the same instruction template the adapter was trained on (`data/prepare.py`) before being sent, keeping the model on-format. The page follows the system light/dark preference live (no manual toggle), keeps a session history of past classifications, and ships inside the Docker image, so the ECS deployment serves it behind the ALB with no extra infrastructure.

@@ -579,6 +579,14 @@
     min-height: 15px;
   }
   .duel-stats b { color: var(--text-dim); font-weight: 500; }
+  .duel-note {
+    padding: 13px 22px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text-dim);
+    text-align: center;
+  }
 
   /* ── Tape ───────────────────────────────── */
   .tape-head {
@@ -704,6 +712,11 @@
         <div class="answer duel-stream" id="duel-base-stream"></div>
         <div class="duel-stats" id="duel-base-stats"></div>
       </div>
+    </div>
+    <div class="duel-note">
+      The base 7B often reads the tone right — in prose no pipeline can consume.
+      The 40&nbsp;MB adapter locks the same model to a schema: parseable every time,
+      measurable (0.95 label accuracy), eval-gated in CI, ~5× fewer tokens per call.
     </div>
   </div>
 
@@ -1062,7 +1075,7 @@
             s.ui.stats.innerHTML = `<span>ttft <b>${ttft} ms</b></span><span><b>${tokens}</b> tok</span>`;
           },
         });
-        if (!locked) setDuelVerdict(s.ui.verdict, "unknown", "no label — off-format");
+        if (!locked) setDuelVerdict(s.ui.verdict, "unknown", "unparseable — prose, not schema");
         s.ui.stats.innerHTML =
           `<span>ttft <b>${r.ttft ?? "–"} ms</b></span>` +
           `<span>total <b>${(r.total / 1000).toFixed(2)} s</b></span>` +
