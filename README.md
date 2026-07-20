@@ -9,6 +9,12 @@
 
 Fine-tuned Mistral-7B for financial sentiment classification using LoRA on Apple Silicon. Exposes a FastAPI service with both batch and SSE streaming inference plus a built-in streaming web UI, containerised with Docker, deployed to AWS ECS via Terraform, and gated by a CI eval pipeline on every push.
 
+<p align="center">
+  <img src="docs/demo.gif" alt="Duel mode: the LoRA fine-tune locks a structured sentiment label in about a second while base Mistral-7B streams a verbose off-format answer" width="820" />
+  <br />
+  <em>Duel mode — same prompt, fine-tune vs raw base model, streamed live.</em>
+</p>
+
 ## Results
 
 | Model | ROUGE-1 | ROUGE-L | Label Accuracy |
