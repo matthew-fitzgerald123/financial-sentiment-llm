@@ -497,6 +497,123 @@
   footer a { color: var(--text-dim); text-decoration: none; }
   footer a:hover { color: var(--text); }
 
+  /* ── Mode switcher ──────────────────────── */
+  .modes {
+    display: flex;
+    gap: 4px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px;
+    width: max-content;
+    margin: 0 auto 16px;
+  }
+  .mode-btn {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    padding: 7px 18px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .mode-btn.active { background: var(--accent-soft); color: var(--text); }
+  .mode-btn:hover:not(.active) { color: var(--text); }
+
+  /* ── Duel ───────────────────────────────── */
+  .duel-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .duel-col { padding: 18px 20px 16px; min-width: 0; }
+  .duel-col + .duel-col { border-left: 1px solid var(--border); }
+  .duel-name {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .duel-name .who { color: var(--text-dim); font-weight: 600; }
+  .duel-verdict {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 21px;
+    font-weight: 750;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    min-height: 30px;
+    margin-bottom: 10px;
+  }
+  .duel-verdict.positive { color: var(--positive); }
+  .duel-verdict.negative { color: var(--negative); }
+  .duel-verdict.neutral { color: var(--neutral); }
+  .duel-verdict.unknown { color: var(--text-faint); font-size: 14px; }
+  .duel-verdict.waiting { color: var(--text-faint); font-size: 13px; font-weight: 500; text-transform: none; }
+  .duel-verdict.analyzing {
+    color: transparent;
+    font-size: 14px;
+    font-weight: 600;
+    background: linear-gradient(90deg, var(--text-faint) 25%, var(--text) 50%, var(--text-faint) 75%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: scan 1.6s linear infinite;
+  }
+  .duel-verdict.pop { animation: pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1); }
+  .duel-stream { max-height: 190px; overflow-y: auto; }
+  .duel-stats {
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    min-height: 15px;
+  }
+  .duel-stats b { color: var(--text-dim); font-weight: 500; }
+
+  /* ── Tape ───────────────────────────────── */
+  .tape-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .mood {
+    font-size: 21px;
+    font-weight: 750;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .mood.bullish { color: var(--positive); }
+  .mood.bearish { color: var(--negative); }
+  .mood.mixed { color: var(--neutral); }
+  .mood.reading { color: var(--text-faint); font-size: 14px; font-weight: 600; }
+  .tape-rows { padding: 6px 10px; }
+  .tape-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 10px;
+    border-bottom: 1px solid var(--border);
+    animation: rise 0.3s ease;
+  }
+  .tape-row:last-child { border-bottom: none; }
+  .tape-row.pending .history-label { animation: blink 1s ease-in-out infinite; }
+  .tape-text { flex: 1; font-size: 13.5px; color: var(--text); min-width: 0; }
+  .tape-ms { font-family: var(--mono); font-size: 11px; color: var(--text-faint); flex-shrink: 0; }
+
   @media (prefers-reduced-motion: reduce) {
     .orb, .hero h2 .grad, .ticker-track, .dot.ok,
     .sent-display.analyzing, .caret { animation: none; }
@@ -538,6 +655,12 @@
     </div>
   </section>
 
+  <div class="modes" id="modes">
+    <button class="mode-btn active" data-mode="classify" title="Classify one statement">Classify</button>
+    <button class="mode-btn" data-mode="duel" title="Same input, fine-tune vs raw base model">Duel</button>
+    <button class="mode-btn" data-mode="tape" title="One headline per line, aggregate market mood">Tape</button>
+  </div>
+
   <div class="input-card">
     <textarea id="question" rows="3" maxlength="3800"
       placeholder="e.g. Operating profit rose to EUR 13.1 mn from EUR 8.7 mn in the corresponding period in 2007…"></textarea>
@@ -565,6 +688,39 @@
       <div class="answer" id="answer"></div>
     </div>
     <div class="result-foot" id="stats"></div>
+  </div>
+
+  <div class="result" id="duel">
+    <div class="duel-grid">
+      <div class="duel-col">
+        <div class="duel-name"><span class="who">Fine-tuned · LoRA</span><span>40 MB adapter</span></div>
+        <div class="duel-verdict waiting" id="duel-tuned-verdict">waiting…</div>
+        <div class="answer duel-stream" id="duel-tuned-stream"></div>
+        <div class="duel-stats" id="duel-tuned-stats"></div>
+      </div>
+      <div class="duel-col">
+        <div class="duel-name"><span class="who">Base Mistral-7B</span><span>no adapter</span></div>
+        <div class="duel-verdict waiting" id="duel-base-verdict">waiting…</div>
+        <div class="answer duel-stream" id="duel-base-stream"></div>
+        <div class="duel-stats" id="duel-base-stats"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="result" id="tape">
+    <div class="tape-head">
+      <div>
+        <div class="stream-caption">market mood</div>
+        <div class="mood reading" id="mood">reading the tape…</div>
+      </div>
+      <div class="dist" style="max-width:260px">
+        <div class="dist-bar" id="tape-dist">
+          <div class="seg positive"></div><div class="seg neutral"></div><div class="seg negative"></div>
+        </div>
+        <span class="dist-counts" id="tape-counts"></span>
+      </div>
+    </div>
+    <div class="tape-rows" id="tape-rows"></div>
   </div>
 
   <div class="history" id="history" style="display:none">
@@ -619,6 +775,8 @@
     modelVersion: $("model-version"), tickerTrack: $("ticker-track"),
     history: $("history"), historyItems: $("history-items"),
     distBar: $("dist-bar"), distCounts: $("dist-counts"),
+    duel: $("duel"), tape: $("tape"), mood: $("mood"),
+    tapeDist: $("tape-dist"), tapeCounts: $("tape-counts"), tapeRows: $("tape-rows"),
   };
 
   /* ── Prompting ──
@@ -647,7 +805,11 @@
     b.innerHTML = `<span class="m ${dir}">${MARKS[dir]}</span>`;
     b.appendChild(document.createTextNode(text));
     b.addEventListener("click", () => {
-      els.question.value = text;
+      if (mode === "tape" && els.question.value.trim()) {
+        els.question.value = els.question.value.trimEnd() + "\n" + text;
+      } else {
+        els.question.value = text;
+      }
       els.question.focus();
     });
     els.tickerTrack.appendChild(b);
@@ -737,69 +899,85 @@
     renderHistory();
   }
 
-  /* ── Streaming ── */
-  async function analyze() {
-    if (streaming) {
-      abortCtrl?.abort();
-      return;
-    }
-    const question = els.question.value.trim();
-    if (!question) { els.question.focus(); return; }
+  /* ── Modes ── */
+  let mode = "classify";
+  const RUN_LABELS = { classify: "Analyze", duel: "Run duel", tape: "Read tape" };
+  const PLACEHOLDERS = {
+    classify: "e.g. Operating profit rose to EUR 13.1 mn from EUR 8.7 mn in the corresponding period in 2007…",
+    duel: "One statement — same prompt goes to the fine-tune and the raw base model…",
+    tape: "Several headlines, one per line — get an aggregate market mood…",
+  };
+  function hideResults() {
+    els.result.classList.remove("visible");
+    els.duel.classList.remove("visible");
+    els.tape.classList.remove("visible");
+  }
+  function setMode(next) {
+    if (streaming) abortCtrl?.abort();
+    mode = next;
+    document.querySelectorAll(".mode-btn").forEach((b) =>
+      b.classList.toggle("active", b.dataset.mode === next));
+    els.runLabel.textContent = RUN_LABELS[next];
+    els.question.placeholder = PLACEHOLDERS[next];
+    hideResults();
+  }
+  document.querySelectorAll(".mode-btn").forEach((b) =>
+    b.addEventListener("click", () => setMode(b.dataset.mode)));
 
-    streaming = true;
-    abortCtrl = new AbortController();
-    els.run.classList.add("streaming");
-    els.runLabel.textContent = "Stop";
+  /* ── Shared SSE reader ── */
+  async function streamRequest({ question, adapter, signal, onToken }) {
+    const t0 = performance.now();
+    let ttft = null, tokens = 0, text = "";
+    const resp = await fetch("/predict/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, max_tokens: 256, adapter }),
+      signal,
+    });
+    if (!resp.ok) {
+      let detail = resp.statusText;
+      try { detail = (await resp.json()).detail ?? detail; } catch {}
+      throw new Error(`${resp.status} — ${typeof detail === "string" ? detail : JSON.stringify(detail)}`);
+    }
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const events = buf.split("\n\n");
+      buf = events.pop();
+      for (const ev of events) {
+        const line = ev.trim();
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (payload === "[DONE]") { buf = ""; break; }
+        let token;
+        try { token = JSON.parse(payload).token; } catch { continue; }
+        if (token == null) continue;
+        if (ttft === null) ttft = Math.round(performance.now() - t0);
+        tokens += 1;
+        text += token;
+        onToken(text, { ttft, tokens });
+      }
+    }
+    return { text, ttft, tokens, total: Math.round(performance.now() - t0) };
+  }
+
+  /* ── Classify ── */
+  async function runClassify(question, signal) {
     els.result.classList.add("visible");
     els.answer.innerHTML = '<span class="caret"></span>';
     els.stats.innerHTML = "";
     els.sentExpl.textContent = "";
     setSentiment("analyzing");
-
-    const t0 = performance.now();
-    let ttft = null;
-    let tokens = 0;
-    let text = "";
-    let labelLocked = false;
-    let finalLabel = "unknown";
-
+    let labelLocked = false, finalLabel = "unknown", lastText = "";
     try {
-      const resp = await fetch("/predict/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: buildPrompt(question), max_tokens: 256 }),
-        signal: abortCtrl.signal,
-      });
-      if (!resp.ok) {
-        let detail = resp.statusText;
-        try { detail = (await resp.json()).detail ?? detail; } catch {}
-        throw new Error(`${resp.status} — ${typeof detail === "string" ? detail : JSON.stringify(detail)}`);
-      }
-
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-
-        const events = buf.split("\n\n");
-        buf = events.pop();
-        for (const ev of events) {
-          const line = ev.trim();
-          if (!line.startsWith("data:")) continue;
-          const payload = line.slice(5).trim();
-          if (payload === "[DONE]") { buf = ""; break; }
-          let token;
-          try { token = JSON.parse(payload).token; } catch { continue; }
-          if (token == null) continue;
-
-          if (ttft === null) ttft = Math.round(performance.now() - t0);
-          tokens += 1;
-          text += token;
-
+      const r = await streamRequest({
+        question: buildPrompt(question), adapter: true, signal,
+        onToken: (text, live) => {
+          lastText = text;
           if (!labelLocked) {
             const m = LABEL_RE.exec(text);
             if (m) {
@@ -810,20 +988,18 @@
           }
           els.answer.textContent = text.trimStart();
           els.answer.insertAdjacentHTML("beforeend", '<span class="caret"></span>');
-          renderStats({ ttft, tokens });
-        }
-      }
-
-      const total = Math.round(performance.now() - t0);
-      els.answer.textContent = text.trim() || "(empty response)";
+          renderStats(live);
+        },
+      });
+      els.answer.textContent = r.text.trim() || "(empty response)";
       if (!labelLocked) setSentiment("unknown");
-      const em = EXPLANATION_RE.exec(text);
+      const em = EXPLANATION_RE.exec(r.text);
       els.sentExpl.textContent = em ? em[1].trim() : "";
-      renderStats({ ttft, total, tokens });
-      pushHistory({ question, label: finalLabel, total });
+      renderStats(r);
+      pushHistory({ question, label: finalLabel, total: r.total });
     } catch (err) {
       if (err.name === "AbortError") {
-        els.answer.textContent = text.trimStart();
+        els.answer.textContent = lastText.trimStart();
         setSentiment(labelLocked ? finalLabel : "unknown");
       } else {
         setSentiment("unknown");
@@ -833,19 +1009,170 @@
         box.textContent = "Request failed: " + err.message;
         els.answer.appendChild(box);
       }
+    }
+  }
+
+  /* ── Duel: fine-tune vs raw base, same prompt ── */
+  function duelSide(side) {
+    return {
+      verdict: $(`duel-${side}-verdict`),
+      stream: $(`duel-${side}-stream`),
+      stats: $(`duel-${side}-stats`),
+    };
+  }
+  function setDuelVerdict(el, state, text) {
+    const settled = ["positive", "negative", "neutral"].includes(state);
+    el.className = "duel-verdict " + state + (settled ? " pop" : "");
+    el.innerHTML = "";
+    if (settled) {
+      const i = document.createElement("span");
+      i.textContent = ICONS[state];
+      el.appendChild(i);
+    }
+    el.appendChild(document.createTextNode(text ?? state));
+  }
+  async function runDuel(question, signal) {
+    els.duel.classList.add("visible");
+    const sides = [
+      { adapter: true, ui: duelSide("tuned") },
+      { adapter: false, ui: duelSide("base") },
+    ];
+    for (const s of sides) {
+      setDuelVerdict(s.ui.verdict, "waiting", "waiting…");
+      s.ui.stream.textContent = "";
+      s.ui.stats.innerHTML = "";
+    }
+    for (const s of sides) {
+      setDuelVerdict(s.ui.verdict, "analyzing", "analyzing…");
+      let locked = false, label = "unknown";
+      try {
+        const r = await streamRequest({
+          question: buildPrompt(question), adapter: s.adapter, signal,
+          onToken: (text, { ttft, tokens }) => {
+            if (!locked) {
+              const m = LABEL_RE.exec(text);
+              if (m) {
+                label = m[1].toLowerCase();
+                setDuelVerdict(s.ui.verdict, label);
+                locked = true;
+              }
+            }
+            s.ui.stream.textContent = text.trimStart();
+            s.ui.stream.scrollTop = s.ui.stream.scrollHeight;
+            s.ui.stats.innerHTML = `<span>ttft <b>${ttft} ms</b></span><span><b>${tokens}</b> tok</span>`;
+          },
+        });
+        if (!locked) setDuelVerdict(s.ui.verdict, "unknown", "no label — off-format");
+        s.ui.stats.innerHTML =
+          `<span>ttft <b>${r.ttft ?? "–"} ms</b></span>` +
+          `<span>total <b>${(r.total / 1000).toFixed(2)} s</b></span>` +
+          `<span><b>${r.tokens}</b> tok</span>` +
+          (locked ? "<span>label locked ✓</span>" : "");
+        if (s.adapter) pushHistory({ question, label, total: r.total });
+      } catch (err) {
+        if (err.name === "AbortError") {
+          setDuelVerdict(s.ui.verdict, locked ? label : "unknown", locked ? label : "stopped");
+          throw err;
+        }
+        setDuelVerdict(s.ui.verdict, "unknown", "error");
+        s.ui.stream.textContent = "Request failed: " + err.message;
+      }
+    }
+  }
+
+  /* ── Tape: one label per line, aggregate mood ── */
+  function updateTapeDist(counts) {
+    const known = counts.positive + counts.neutral + counts.negative;
+    const segs = els.tapeDist.children;
+    ["positive", "neutral", "negative"].forEach((label, i) => {
+      segs[i].style.width = known ? (100 * counts[label] / known) + "%" : "0%";
+    });
+    els.tapeCounts.textContent =
+      `${counts.positive}▲ ${counts.neutral}◆ ${counts.negative}▼`;
+  }
+  async function runTape(question, signal) {
+    const lines = question.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 12);
+    els.tape.classList.add("visible");
+    els.tapeRows.innerHTML = "";
+    els.mood.className = "mood reading";
+    els.mood.textContent = "reading the tape…";
+    const counts = { positive: 0, neutral: 0, negative: 0 };
+    updateTapeDist(counts);
+    const rows = lines.map((line) => {
+      const row = document.createElement("div");
+      row.className = "tape-row pending";
+      row.innerHTML =
+        '<span class="history-label unknown">…</span>' +
+        '<span class="tape-text"></span>' +
+        '<span class="tape-ms"></span>';
+      row.querySelector(".tape-text").textContent = line;
+      els.tapeRows.appendChild(row);
+      return row;
+    });
+    for (let i = 0; i < lines.length; i++) {
+      const row = rows[i];
+      const pill = row.querySelector(".history-label");
+      const t0 = performance.now();
+      try {
+        const resp = await fetch("/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: buildPrompt(lines[i]), max_tokens: 96 }),
+          signal,
+        });
+        if (!resp.ok) throw new Error(String(resp.status));
+        const d = await resp.json();
+        const label = d.label ?? "unknown";
+        row.className = "tape-row";
+        pill.className = "history-label " + label;
+        pill.textContent = label;
+        row.querySelector(".tape-ms").textContent =
+          ((performance.now() - t0) / 1000).toFixed(1) + "s";
+        if (counts[label] != null) counts[label] += 1;
+        updateTapeDist(counts);
+      } catch (err) {
+        row.className = "tape-row";
+        pill.className = "history-label unknown";
+        pill.textContent = err.name === "AbortError" ? "stopped" : "error";
+        if (err.name === "AbortError") throw err;
+      }
+    }
+    const known = counts.positive + counts.neutral + counts.negative;
+    const net = known ? (counts.positive - counts.negative) / known : 0;
+    const moodLabel = net > 0.15 ? "bullish" : net < -0.15 ? "bearish" : "mixed";
+    els.mood.className = "mood " + moodLabel;
+    els.mood.textContent = moodLabel;
+  }
+
+  /* ── Dispatcher ── */
+  async function run() {
+    if (streaming) { abortCtrl?.abort(); return; }
+    const question = els.question.value.trim();
+    if (!question) { els.question.focus(); return; }
+    streaming = true;
+    abortCtrl = new AbortController();
+    els.run.classList.add("streaming");
+    els.runLabel.textContent = "Stop";
+    hideResults();
+    try {
+      if (mode === "duel") await runDuel(question, abortCtrl.signal);
+      else if (mode === "tape") await runTape(question, abortCtrl.signal);
+      else await runClassify(question, abortCtrl.signal);
+    } catch (err) {
+      if (err.name !== "AbortError") console.error(err);
     } finally {
       streaming = false;
       abortCtrl = null;
       els.run.classList.remove("streaming");
-      els.runLabel.textContent = "Analyze";
+      els.runLabel.textContent = RUN_LABELS[mode];
     }
   }
 
-  els.run.addEventListener("click", analyze);
+  els.run.addEventListener("click", run);
   els.question.addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
-      analyze();
+      run();
     }
   });
 })();

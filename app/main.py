@@ -28,7 +28,20 @@ MODEL_VERSION = os.getenv("MODEL_VERSION", "mistral-7b-finance-mlx-lora-v1")
 
 model = None
 tokenizer = None
+base_model = None
+base_tokenizer = None
 executor = ThreadPoolExecutor(max_workers=1)
+
+
+def _get_base():
+    """Lazy-load the adapter-free base model for comparison requests.
+
+    Only runs inside the single-worker executor, so no lock is needed."""
+    global base_model, base_tokenizer
+    if base_model is None:
+        logger.info("Lazy-loading base model %r for adapter=false requests", MODEL_ID)
+        base_model, base_tokenizer = load(MODEL_ID)
+    return base_model, base_tokenizer
 
 
 @asynccontextmanager
@@ -59,6 +72,7 @@ mount_ui(app)
 class Query(BaseModel):
     question: str = Field(..., min_length=1, max_length=4096)
     max_tokens: int = Field(256, gt=0, le=2048)
+    adapter: bool = Field(True, description="False generates with the raw base model")
 
     @field_validator("question")
     @classmethod
@@ -76,15 +90,17 @@ class Response(BaseModel):
     model_version: str
 
 
-def _generate(question: str, max_tokens: int) -> str:
+def _generate(question: str, max_tokens: int, use_adapter: bool = True) -> str:
+    m, t = (model, tokenizer) if use_adapter else _get_base()
     prompt = f"<s>[INST] {question} [/INST]"
-    return mlx_generate(model, tokenizer, prompt=prompt, max_tokens=max_tokens)
+    return mlx_generate(m, t, prompt=prompt, max_tokens=max_tokens)
 
 
-def _stream_into_queue(question: str, max_tokens: int, q: Queue, done: Event):
+def _stream_into_queue(question: str, max_tokens: int, use_adapter: bool, q: Queue, done: Event):
     prompt = f"<s>[INST] {question} [/INST]"
     try:
-        for chunk in stream_generate(model, tokenizer, prompt=prompt, max_tokens=max_tokens):
+        m, t = (model, tokenizer) if use_adapter else _get_base()
+        for chunk in stream_generate(m, t, prompt=prompt, max_tokens=max_tokens):
             q.put(chunk.text)
     finally:
         done.set()
@@ -97,7 +113,9 @@ async def predict(query: Query):
         raise HTTPException(status_code=503, detail="Model not loaded")
 
     loop = asyncio.get_event_loop()
-    answer = await loop.run_in_executor(executor, _generate, query.question, query.max_tokens)
+    answer = await loop.run_in_executor(
+        executor, _generate, query.question, query.max_tokens, query.adapter
+    )
     return Response(
         answer=answer,
         label=parse_sentiment_label(answer),
@@ -115,7 +133,7 @@ async def predict_stream(query: Query):
 
     q: Queue = Queue()
     done = Event()
-    executor.submit(_stream_into_queue, query.question, query.max_tokens, q, done)
+    executor.submit(_stream_into_queue, query.question, query.max_tokens, query.adapter, q, done)
 
     async def event_generator():
         loop = asyncio.get_event_loop()

@@ -56,3 +56,13 @@ def test_all_entrypoints_mount_ui():
     for entrypoint in ("main.py", "main_ecs.py", "main_vllm.py"):
         source = (app_dir / entrypoint).read_text()
         assert "mount_ui(app)" in source, f"{entrypoint} does not mount the UI"
+
+
+def test_index_has_three_modes():
+    """The UI must expose Classify, Duel, and Tape modes; Duel relies on the
+    adapter flag the API accepts on /predict and /predict/stream."""
+    html = (STATIC_DIR / "index.html").read_text()
+    assert 'data-mode="classify"' in html
+    assert 'data-mode="duel"' in html
+    assert 'data-mode="tape"' in html
+    assert "adapter" in html

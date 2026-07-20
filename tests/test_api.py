@@ -290,3 +290,13 @@ def test_lifespan_logs_and_reraises_on_load_failure(caplog):
                 with TestClient(mlx_app):
                     pass
     assert "failed to load model" in caplog.text.lower()
+
+
+def test_predict_with_adapter_false_uses_base_model(client):
+    """adapter=false must be accepted and served by the lazily loaded base model."""
+    r = client.post(
+        "/predict",
+        json={"question": "Classify the sentiment: 'Margins expanded.'", "adapter": False},
+    )
+    assert r.status_code == 200
+    assert "label" in r.json()

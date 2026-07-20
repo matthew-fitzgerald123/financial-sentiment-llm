@@ -8,7 +8,7 @@ import json
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from pathlib import Path
 from queue import Empty, Queue
 from threading import Event
@@ -34,6 +34,10 @@ executor = ThreadPoolExecutor(max_workers=1)
 MOCK_MODE = os.getenv("MOCK_MODE", "false").lower() == "true"
 
 _MOCK_RESPONSE = "Sentiment: positive. This statement reflects favorable financial conditions."
+_MOCK_BASE_RESPONSE = (
+    "The sentiment of this statement appears to be generally positive, although "
+    "it depends on the broader context of the company's financial position."
+)
 
 
 @asynccontextmanager
@@ -82,6 +86,7 @@ mount_ui(app)
 class Query(BaseModel):
     question: str = Field(..., min_length=1, max_length=4096)
     max_tokens: int = Field(256, gt=0, le=2048)
+    adapter: bool = Field(True, description="False generates with the raw base model")
 
     @field_validator("question")
     @classmethod
@@ -99,22 +104,30 @@ class Response(BaseModel):
     model_version: str
 
 
-def _generate(question: str, max_tokens: int) -> str:
+def _adapter_context(model, use_adapter: bool):
+    """PEFT models can generate without the adapter via disable_adapter()."""
+    if not use_adapter and hasattr(model, "disable_adapter"):
+        return model.disable_adapter()
+    return nullcontext()
+
+
+def _generate(question: str, max_tokens: int, use_adapter: bool = True) -> str:
     if MOCK_MODE:
-        return _MOCK_RESPONSE
-    from transformers import pipeline as hf_pipeline
+        return _MOCK_RESPONSE if use_adapter else _MOCK_BASE_RESPONSE
     model = pipeline["model"]
     tokenizer = pipeline["tokenizer"]
     prompt = f"<s>[INST] {question} [/INST]"
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    output = model.generate(**inputs, max_new_tokens=max_tokens, do_sample=False)
+    with _adapter_context(model, use_adapter):
+        output = model.generate(**inputs, max_new_tokens=max_tokens, do_sample=False)
     decoded = tokenizer.decode(output[0], skip_special_tokens=True)
     return decoded.split("[/INST]")[-1].strip()
 
 
-def _stream_into_queue(question: str, max_tokens: int, q: Queue, done: Event):
+def _stream_into_queue(question: str, max_tokens: int, use_adapter: bool, q: Queue, done: Event):
     if MOCK_MODE:
-        for token in _MOCK_RESPONSE.split():
+        source = _MOCK_RESPONSE if use_adapter else _MOCK_BASE_RESPONSE
+        for token in source.split():
             q.put(token + " ")
         done.set()
         return
@@ -126,7 +139,12 @@ def _stream_into_queue(question: str, max_tokens: int, q: Queue, done: Event):
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
     gen_kwargs = dict(**inputs, max_new_tokens=max_tokens, streamer=streamer, do_sample=False)
-    t = threading.Thread(target=model.generate, kwargs=gen_kwargs, daemon=True)
+
+    def _run():
+        with _adapter_context(model, use_adapter):
+            model.generate(**gen_kwargs)
+
+    t = threading.Thread(target=_run, daemon=True)
     t.start()
     try:
         for token in streamer:
@@ -142,7 +160,9 @@ async def predict(query: Query):
         logger.warning("Rejecting /predict: model not loaded")
         raise HTTPException(status_code=503, detail="Model not loaded")
     loop = asyncio.get_event_loop()
-    answer = await loop.run_in_executor(executor, _generate, query.question, query.max_tokens)
+    answer = await loop.run_in_executor(
+        executor, _generate, query.question, query.max_tokens, query.adapter
+    )
     return Response(
         answer=answer,
         label=parse_sentiment_label(answer),
@@ -158,7 +178,7 @@ async def predict_stream(query: Query):
         raise HTTPException(status_code=503, detail="Model not loaded")
     q: Queue = Queue()
     done = Event()
-    executor.submit(_stream_into_queue, query.question, query.max_tokens, q, done)
+    executor.submit(_stream_into_queue, query.question, query.max_tokens, query.adapter, q, done)
 
     async def event_generator():
         loop = asyncio.get_event_loop()

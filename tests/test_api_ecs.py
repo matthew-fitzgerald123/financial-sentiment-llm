@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 _MOCK_ANSWER = "Sentiment: positive. This statement reflects favorable financial conditions."
 
 
-def _mock_stream(question, max_tokens, q, done):
+def _mock_stream(question, max_tokens, use_adapter, q, done):
     done.set()
 
 

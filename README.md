@@ -134,7 +134,13 @@ make terraform-validate
 
 ## Web UI
 
-Every serving entrypoint serves a zero-dependency single-page UI at `/` (e.g. http://localhost:8080 after `make serve`). Input is wrapped client-side in the same instruction template the adapter was trained on (`data/prepare.py`) before being sent, keeping the model on-format. It streams tokens live from `/predict/stream`, detects the sentiment label mid-stream, and reports time-to-first-token, total latency, and tokens/sec per request, with a session history of past classifications and a sentiment distribution bar across that history. The page follows the system light/dark preference live (no manual toggle), and shows headline eval metrics and a train → gate → serve pipeline summary alongside the classifier. It ships inside the Docker image, so the ECS deployment serves it behind the ALB with no extra infrastructure.
+Every serving entrypoint serves a zero-dependency single-page UI at `/` (e.g. http://localhost:8080 after `make serve`) with three modes:
+
+- **Classify** — stream one statement's classification token by token, with the label detected mid-stream, the parsed verdict surfaced above the raw stream, and per-request time-to-first-token / total latency / tokens-per-sec.
+- **Duel** — send the same prompt to the fine-tune and to the raw base model side by side (`adapter: false` on the API). The fine-tune locks a structured `Sentiment:` label in a handful of tokens; the base model typically rambles off-format — the value of the 40 MB adapter, made visible.
+- **Tape** — paste several headlines (one per line) and get a per-line label plus an aggregate bullish / bearish / mixed market-mood readout with a sentiment distribution bar.
+
+Input is wrapped client-side in the same instruction template the adapter was trained on (`data/prepare.py`) before being sent, keeping the model on-format. The page follows the system light/dark preference live (no manual toggle), keeps a session history of past classifications, and ships inside the Docker image, so the ECS deployment serves it behind the ALB with no extra infrastructure.
 
 ## Inference
 
@@ -152,6 +158,8 @@ curl http://localhost:8080/model/info
   "merged": false
 }
 ```
+
+Both `/predict` and `/predict/stream` also accept `"adapter": false` to generate with the raw base model instead of the fine-tune (used by the UI's Duel mode; mlx lazy-loads the base copy on first use, PEFT disables the adapter in place, vLLM drops the LoRA request).
 
 **Batch:**
 ```bash
