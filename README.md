@@ -7,7 +7,7 @@
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![Platform](https://img.shields.io/badge/platform-Apple%20Silicon-black)
 
-Fine-tuned Mistral-7B for financial sentiment classification using LoRA on Apple Silicon. Exposes a FastAPI service with both batch and SSE streaming inference, containerised with Docker, deployed to AWS ECS via Terraform, and gated by a CI eval pipeline on every push.
+Fine-tuned Mistral-7B for financial sentiment classification using LoRA on Apple Silicon. Exposes a FastAPI service with both batch and SSE streaming inference plus a built-in streaming web UI, containerised with Docker, deployed to AWS ECS via Terraform, and gated by a CI eval pipeline on every push.
 
 ## Results
 
@@ -51,7 +51,7 @@ flowchart TD
 
     DC --> ECR
     VL --> ECR
-    Client([Client]) -->|HTTP /predict\n/predict/stream| ALB
+    Client([Client]) -->|Web UI at /\n/predict · /predict/stream| ALB
     Client -->|local dev| LC
 ```
 
@@ -131,6 +131,10 @@ docker compose up --build
 # Check Terraform formatting and validate the infra/ config (no AWS credentials needed)
 make terraform-validate
 ```
+
+## Web UI
+
+Every serving entrypoint serves a zero-dependency single-page UI at `/` (e.g. http://localhost:8080 after `make serve`). It streams tokens live from `/predict/stream`, detects the sentiment label mid-stream, and reports time-to-first-token, total latency, and tokens/sec per request, with a session history of past classifications. It ships inside the Docker image, so the ECS deployment serves it behind the ALB with no extra infrastructure.
 
 ## Inference
 

@@ -17,6 +17,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.ui import mount_ui
 from app.utils import configure_logging, parse_sentiment_explanation, parse_sentiment_label
 
 configure_logging()
@@ -75,6 +76,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Financial Sentiment LLM API (ECS)", lifespan=lifespan)
+mount_ui(app)
 
 
 class Query(BaseModel):

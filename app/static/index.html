@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Financial Sentiment · Mistral-7B LoRA</title>
+<style>
+  :root {
+    --bg: #08090c;
+    --bg-raised: #0e1015;
+    --bg-input: #12141b;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
+    --text: #e8eaf0;
+    --text-dim: #8b90a0;
+    --text-faint: #565b6b;
+    --accent: #6d7cff;
+    --accent-soft: rgba(109, 124, 255, 0.14);
+    --positive: #34d399;
+    --positive-soft: rgba(52, 211, 153, 0.12);
+    --negative: #f87171;
+    --negative-soft: rgba(248, 113, 113, 0.12);
+    --neutral: #94a3b8;
+    --neutral-soft: rgba(148, 163, 184, 0.12);
+    --mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(600px 320px at 50% -80px, rgba(109, 124, 255, 0.13), transparent 70%),
+      radial-gradient(900px 500px at 85% 110%, rgba(52, 211, 153, 0.05), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .shell {
+    position: relative;
+    z-index: 1;
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ── Header ─────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 44px;
+    flex-wrap: wrap;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-mark {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #6d7cff 0%, #34d399 120%);
+    display: grid; place-items: center;
+    font-family: var(--mono);
+    font-weight: 700; font-size: 15px;
+    color: #06070a;
+    letter-spacing: -0.5px;
+    flex-shrink: 0;
+  }
+  .brand h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.2px; }
+  .brand .sub {
+    font-size: 12px; color: var(--text-dim);
+    font-family: var(--mono);
+  }
+  .status {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text-dim);
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg-raised);
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text-faint);
+    flex-shrink: 0;
+  }
+  .dot.ok {
+    background: var(--positive);
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5);
+    animation: pulse 2.4s ease-out infinite;
+  }
+  .dot.err { background: var(--negative); }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.45); }
+    70% { box-shadow: 0 0 0 7px rgba(52, 211, 153, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+  }
+
+  /* ── Hero ───────────────────────────────── */
+  .hero { margin-bottom: 28px; }
+  .hero h2 {
+    font-size: 30px;
+    font-weight: 650;
+    letter-spacing: -0.8px;
+    line-height: 1.15;
+    margin-bottom: 10px;
+  }
+  .hero h2 .grad {
+    background: linear-gradient(90deg, #a5b0ff, #6d7cff 55%, #34d399);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero p { color: var(--text-dim); font-size: 14.5px; max-width: 560px; }
+
+  /* ── Input card ─────────────────────────── */
+  .card {
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .input-card:focus-within { border-color: rgba(109, 124, 255, 0.45); }
+  textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 18px 20px 8px;
+    min-height: 96px;
+  }
+  textarea::placeholder { color: var(--text-faint); }
+  .input-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px 12px 20px;
+  }
+  .hint {
+    font-size: 12px;
+    color: var(--text-faint);
+    font-family: var(--mono);
+  }
+  .hint kbd {
+    font-family: inherit;
+    border: 1px solid var(--border-strong);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  button.run {
+    font-family: var(--sans);
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(180deg, #7b89ff, #5c6cf2);
+    border: none;
+    border-radius: 10px;
+    padding: 9px 20px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: filter 0.15s, transform 0.05s;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset, 0 4px 16px rgba(92, 108, 242, 0.35);
+  }
+  button.run:hover:not(:disabled) { filter: brightness(1.08); }
+  button.run:active:not(:disabled) { transform: translateY(1px); }
+  button.run:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+  button.run.streaming {
+    background: var(--bg-input);
+    color: var(--text-dim);
+    border: 1px solid var(--border-strong);
+    box-shadow: none;
+  }
+
+  /* ── Examples ───────────────────────────── */
+  .examples {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 14px 2px 0;
+  }
+  .chip {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 13px;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .chip:hover {
+    color: var(--text);
+    border-color: var(--border-strong);
+    background: var(--accent-soft);
+  }
+
+  /* ── Result ─────────────────────────────── */
+  .result {
+    margin-top: 28px;
+    display: none;
+    animation: rise 0.35s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  .result.visible { display: block; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  .result-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    background: var(--bg-input);
+    transition: all 0.25s;
+  }
+  .badge .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; opacity: 0.9; }
+  .badge.positive { color: var(--positive); background: var(--positive-soft); border-color: rgba(52,211,153,0.35); box-shadow: 0 0 24px rgba(52,211,153,0.18); }
+  .badge.negative { color: var(--negative); background: var(--negative-soft); border-color: rgba(248,113,113,0.35); box-shadow: 0 0 24px rgba(248,113,113,0.18); }
+  .badge.neutral  { color: var(--neutral);  background: var(--neutral-soft);  border-color: rgba(148,163,184,0.35); }
+  .badge.analyzing .badge-dot { animation: blink 1s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: 0.2; } }
+  .stats {
+    display: flex;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-faint);
+    flex-wrap: wrap;
+  }
+  .stats span b { color: var(--text-dim); font-weight: 500; }
+  .answer {
+    padding: 18px 20px 20px;
+    font-size: 14.5px;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 58px;
+  }
+  .caret {
+    display: inline-block;
+    width: 8px; height: 17px;
+    background: var(--accent);
+    vertical-align: text-bottom;
+    margin-left: 2px;
+    border-radius: 1px;
+    animation: blink 0.9s step-end infinite;
+  }
+  .error-box {
+    color: var(--negative);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+
+  /* ── History ────────────────────────────── */
+  .history { margin-top: 36px; }
+  .history h3 {
+    font-size: 11.5px;
+    font-family: var(--mono);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 12px;
+  }
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    background: var(--bg-raised);
+    cursor: pointer;
+    transition: border-color 0.15s;
+    animation: rise 0.3s ease;
+  }
+  .history-item:hover { border-color: var(--border-strong); }
+  .history-label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+  .history-label.positive { color: var(--positive); background: var(--positive-soft); }
+  .history-label.negative { color: var(--negative); background: var(--negative-soft); }
+  .history-label.neutral,
+  .history-label.unknown { color: var(--neutral); background: var(--neutral-soft); }
+  .history-text {
+    font-size: 13px;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+  }
+  .history-ms {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    flex-shrink: 0;
+  }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--text-faint);
+  }
+  footer a { color: var(--text-dim); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 560px) {
+    .hero h2 { font-size: 24px; }
+    .result-head { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand">
+      <div class="brand-mark">FS</div>
+      <div>
+        <h1>Financial Sentiment</h1>
+        <div class="sub" id="model-version">mistral-7b · lora</div>
+      </div>
+    </div>
+    <div class="status" id="status">
+      <span class="dot" id="status-dot"></span>
+      <span id="status-text">connecting</span>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h2>Market language, <span class="grad">read in real time</span></h2>
+    <p>Paste a headline, filing excerpt, or analyst note. A LoRA fine-tuned
+       Mistral-7B streams back its classification token by token.</p>
+  </section>
+
+  <div class="card input-card">
+    <textarea id="question" rows="3" maxlength="4096"
+      placeholder="e.g. Operating profit rose to EUR 13.1 mn from EUR 8.7 mn in the corresponding period in 2007…"></textarea>
+    <div class="input-footer">
+      <span class="hint"><kbd>⌘</kbd> + <kbd>↵</kbd> to analyze</span>
+      <button class="run" id="run">
+        <span id="run-label">Analyze</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="examples" id="examples"></div>
+
+  <div class="card result" id="result">
+    <div class="result-head">
+      <span class="badge" id="badge">
+        <span class="badge-dot"></span>
+        <span id="badge-text">analyzing</span>
+      </span>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="answer" id="answer"></div>
+  </div>
+
+  <div class="history" id="history" style="display:none">
+    <h3>Session history</h3>
+    <div id="history-items"></div>
+  </div>
+
+  <footer>
+    <span>Mistral-7B-Instruct-v0.3 · LoRA r=8 · label acc 0.95</span>
+    <span>
+      <a href="/docs">API docs</a>&nbsp;&nbsp;·&nbsp;&nbsp;
+      <a href="https://github.com/matthew-fitzgerald123/financial-sentiment-llm">GitHub</a>
+    </span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    question: $("question"), run: $("run"), runLabel: $("run-label"),
+    result: $("result"), answer: $("answer"), badge: $("badge"),
+    badgeText: $("badge-text"), stats: $("stats"),
+    statusDot: $("status-dot"), statusText: $("status-text"),
+    modelVersion: $("model-version"), examples: $("examples"),
+    history: $("history"), historyItems: $("history-items"),
+  };
+
+  const EXAMPLES = [
+    "Operating profit jumped 34% year-on-year, well ahead of consensus.",
+    "The company issued a profit warning and suspended its dividend.",
+    "Quarterly revenue was in line with the guidance given in January.",
+    "Net sales fell 12% as demand weakened across all segments.",
+  ];
+  EXAMPLES.forEach((text) => {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = text.length > 52 ? text.slice(0, 52) + "…" : text;
+    b.title = text;
+    b.addEventListener("click", () => {
+      els.question.value = text;
+      els.question.focus();
+    });
+    els.examples.appendChild(b);
+  });
+
+  const LABEL_RE = /Sentiment:\s*(positive|neutral|negative)/i;
+  let streaming = false;
+  let abortCtrl = null;
+
+  /* ── Health polling ── */
+  async function checkHealth() {
+    try {
+      const r = await fetch("/health");
+      const d = await r.json();
+      const ok = r.ok && d.model_loaded;
+      els.statusDot.className = "dot " + (ok ? "ok" : "err");
+      els.statusText.textContent = ok ? "model live" : "model loading";
+      if (d.model_version) els.modelVersion.textContent = d.model_version;
+    } catch {
+      els.statusDot.className = "dot err";
+      els.statusText.textContent = "offline";
+    }
+  }
+  checkHealth();
+  setInterval(checkHealth, 15000);
+
+  /* ── Badge ── */
+  function setBadge(state) {
+    els.badge.className = "badge " + state;
+    els.badgeText.textContent = state === "analyzing" ? "analyzing" : state;
+  }
+
+  /* ── Stats ── */
+  function renderStats({ ttft, total, tokens }) {
+    const parts = [];
+    if (ttft != null) parts.push(`<span>ttft <b>${ttft} ms</b></span>`);
+    if (total != null) parts.push(`<span>total <b>${(total / 1000).toFixed(2)} s</b></span>`);
+    if (tokens) {
+      parts.push(`<span><b>${tokens}</b> tok</span>`);
+      if (total) parts.push(`<span><b>${(tokens / (total / 1000)).toFixed(1)}</b> tok/s</span>`);
+    }
+    els.stats.innerHTML = parts.join("");
+  }
+
+  /* ── History ── */
+  const history = [];
+  function pushHistory(entry) {
+    history.unshift(entry);
+    if (history.length > 8) history.pop();
+    els.history.style.display = "block";
+    els.historyItems.innerHTML = "";
+    history.forEach((h) => {
+      const div = document.createElement("div");
+      div.className = "history-item";
+      div.innerHTML =
+        `<span class="history-label ${h.label}">${h.label}</span>` +
+        `<span class="history-text"></span>` +
+        `<span class="history-ms">${(h.total / 1000).toFixed(1)}s</span>`;
+      div.querySelector(".history-text").textContent = h.question;
+      div.addEventListener("click", () => {
+        els.question.value = h.question;
+        els.question.focus();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+      els.historyItems.appendChild(div);
+    });
+  }
+
+  /* ── Streaming ── */
+  async function analyze() {
+    if (streaming) {
+      abortCtrl?.abort();
+      return;
+    }
+    const question = els.question.value.trim();
+    if (!question) { els.question.focus(); return; }
+
+    streaming = true;
+    abortCtrl = new AbortController();
+    els.run.classList.add("streaming");
+    els.runLabel.textContent = "Stop";
+    els.result.classList.add("visible");
+    els.answer.innerHTML = '<span class="caret"></span>';
+    els.stats.innerHTML = "";
+    setBadge("analyzing");
+
+    const t0 = performance.now();
+    let ttft = null;
+    let tokens = 0;
+    let text = "";
+    let labelLocked = false;
+    let finalLabel = "unknown";
+
+    try {
+      const resp = await fetch("/predict/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, max_tokens: 256 }),
+        signal: abortCtrl.signal,
+      });
+      if (!resp.ok) {
+        let detail = resp.statusText;
+        try { detail = (await resp.json()).detail ?? detail; } catch {}
+        throw new Error(`${resp.status} — ${typeof detail === "string" ? detail : JSON.stringify(detail)}`);
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+
+        const events = buf.split("\n\n");
+        buf = events.pop();
+        for (const ev of events) {
+          const line = ev.trim();
+          if (!line.startsWith("data:")) continue;
+          const payload = line.slice(5).trim();
+          if (payload === "[DONE]") { buf = ""; break; }
+          let token;
+          try { token = JSON.parse(payload).token; } catch { continue; }
+          if (token == null) continue;
+
+          if (ttft === null) ttft = Math.round(performance.now() - t0);
+          tokens += 1;
+          text += token;
+
+          if (!labelLocked) {
+            const m = LABEL_RE.exec(text);
+            if (m) {
+              finalLabel = m[1].toLowerCase();
+              setBadge(finalLabel);
+              labelLocked = true;
+            }
+          }
+          els.answer.textContent = text;
+          els.answer.insertAdjacentHTML("beforeend", '<span class="caret"></span>');
+          renderStats({ ttft, tokens });
+        }
+      }
+
+      const total = Math.round(performance.now() - t0);
+      els.answer.textContent = text || "(empty response)";
+      if (!labelLocked) setBadge("unknown");
+      renderStats({ ttft, total, tokens });
+      pushHistory({ question, label: finalLabel, total });
+    } catch (err) {
+      if (err.name === "AbortError") {
+        els.answer.textContent = text;
+        setBadge(labelLocked ? finalLabel : "unknown");
+      } else {
+        setBadge("unknown");
+        els.answer.innerHTML = "";
+        const box = document.createElement("div");
+        box.className = "error-box";
+        box.textContent = "Request failed: " + err.message;
+        els.answer.appendChild(box);
+      }
+    } finally {
+      streaming = false;
+      abortCtrl = null;
+      els.run.classList.remove("streaming");
+      els.runLabel.textContent = "Analyze";
+    }
+  }
+
+  els.run.addEventListener("click", analyze);
+  els.question.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      analyze();
+    }
+  });
+})();
+</script>
+</body>
+</html>
