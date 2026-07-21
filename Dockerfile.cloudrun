@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# CPU-only backend: llama.cpp running the merged 4-bit GGUF export
+COPY app/requirements-gguf.txt .
+RUN pip install --no-cache-dir -r requirements-gguf.txt
+
+# Model weights first: large, stable layer that code edits won't invalidate
+COPY models/ ./models/
+COPY app/ ./app/
+
+ENV FINETUNED_GGUF=./models/mistral-7b-finance-Q4_K_M.gguf
+ENV BASE_GGUF=./models/Mistral-7B-Instruct-v0.3-Q4_K_M.gguf
+ENV MODEL_VERSION=mistral-7b-finance-mlx-lora-v1
+
+EXPOSE 8080
+
+# Cloud Run injects PORT; default to 8080 for local runs
+CMD ["sh", "-c", "uvicorn app.main_gguf:app --host 0.0.0.0 --port ${PORT:-8080}"]

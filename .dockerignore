@@ -9,3 +9,4 @@ train/
 eval/
 data/
 *.log
+models/.cache
