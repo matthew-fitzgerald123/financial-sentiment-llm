@@ -11,7 +11,7 @@ from queue import Empty, Queue
 from threading import Event
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from mlx_lm import load
 from mlx_lm import generate as mlx_generate
 from mlx_lm import stream_generate
@@ -195,4 +195,6 @@ async def model_info():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "model_loaded": model is not None, "model_version": MODEL_VERSION}
+    loaded = model is not None
+    body = {"status": "ok" if loaded else "unhealthy", "model_loaded": loaded, "model_version": MODEL_VERSION}
+    return JSONResponse(content=body, status_code=200 if loaded else 503)
