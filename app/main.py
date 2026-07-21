@@ -2,6 +2,8 @@ import asyncio
 import json
 import logging
 import os
+import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -96,12 +98,25 @@ def _generate(question: str, max_tokens: int, use_adapter: bool = True) -> str:
     return mlx_generate(m, t, prompt=prompt, max_tokens=max_tokens)
 
 
-def _stream_into_queue(question: str, max_tokens: int, use_adapter: bool, q: Queue, done: Event):
+def _stream_into_queue(
+    question: str, max_tokens: int, use_adapter: bool, q: Queue, done: Event, request_id: str
+):
     prompt = f"<s>[INST] {question} [/INST]"
+    start = time.perf_counter()
+    logger.info(
+        "predict/stream request start request_id=%s adapter=%s max_tokens=%d",
+        request_id, use_adapter, max_tokens,
+    )
     try:
         m, t = (model, tokenizer) if use_adapter else _get_base()
         for chunk in stream_generate(m, t, prompt=prompt, max_tokens=max_tokens):
             q.put(chunk.text)
+        logger.info(
+            "predict/stream request done request_id=%s latency_ms=%.1f",
+            request_id, (time.perf_counter() - start) * 1000,
+        )
+    except Exception:
+        logger.error("predict/stream request failed request_id=%s", request_id, exc_info=True)
     finally:
         done.set()
 
@@ -112,9 +127,23 @@ async def predict(query: Query):
         logger.warning("Rejecting /predict: model not loaded")
         raise HTTPException(status_code=503, detail="Model not loaded")
 
+    request_id = str(uuid.uuid4())
+    start = time.perf_counter()
+    logger.info(
+        "predict request start request_id=%s adapter=%s max_tokens=%d",
+        request_id, query.adapter, query.max_tokens,
+    )
     loop = asyncio.get_event_loop()
-    answer = await loop.run_in_executor(
-        executor, _generate, query.question, query.max_tokens, query.adapter
+    try:
+        answer = await loop.run_in_executor(
+            executor, _generate, query.question, query.max_tokens, query.adapter
+        )
+    except Exception:
+        logger.error("predict request failed request_id=%s", request_id, exc_info=True)
+        raise HTTPException(status_code=500, detail="Generation failed") from None
+    logger.info(
+        "predict request done request_id=%s latency_ms=%.1f",
+        request_id, (time.perf_counter() - start) * 1000,
     )
     return Response(
         answer=answer,
@@ -131,9 +160,12 @@ async def predict_stream(query: Query):
         logger.warning("Rejecting /predict/stream: model not loaded")
         raise HTTPException(status_code=503, detail="Model not loaded")
 
+    request_id = str(uuid.uuid4())
     q: Queue = Queue()
     done = Event()
-    executor.submit(_stream_into_queue, query.question, query.max_tokens, query.adapter, q, done)
+    executor.submit(
+        _stream_into_queue, query.question, query.max_tokens, query.adapter, q, done, request_id
+    )
 
     async def event_generator():
         loop = asyncio.get_event_loop()

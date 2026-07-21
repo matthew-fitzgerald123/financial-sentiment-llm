@@ -300,3 +300,77 @@ def test_predict_with_adapter_false_uses_base_model(client):
     )
     assert r.status_code == 200
     assert "label" in r.json()
+
+
+# ---------------------------------------------------------------------------
+# Per-request observability: request_id + latency logging, error handling
+# ---------------------------------------------------------------------------
+
+def test_predict_logs_start_and_done_with_request_id(client, caplog):
+    """A successful /predict call must log a start and done line sharing one request_id."""
+    with caplog.at_level("INFO", logger="app.main"):
+        client.post("/predict", json={"question": "Classify: 'Revenue rose 12%.'"})
+
+    start_lines = [r for r in caplog.records if "predict request start" in r.message]
+    done_lines = [r for r in caplog.records if "predict request done" in r.message]
+    assert len(start_lines) == 1
+    assert len(done_lines) == 1
+
+    import re
+    start_id = re.search(r"request_id=(\S+)", start_lines[0].message).group(1)
+    done_id = re.search(r"request_id=(\S+)", done_lines[0].message).group(1)
+    assert start_id == done_id
+    assert "latency_ms=" in done_lines[0].message
+
+
+def test_predict_generation_failure_returns_500_and_logs_error(client, caplog):
+    """A generation exception must be logged with the request_id and surfaced as a 500, not crash unhandled."""
+    with (
+        patch("app.main.mlx_generate", side_effect=RuntimeError("out of memory")),
+        caplog.at_level("ERROR", logger="app.main"),
+    ):
+        r = client.post("/predict", json={"question": "Classify: 'Revenue rose 12%.'"})
+
+    assert r.status_code == 500
+    error_lines = [rec for rec in caplog.records if "predict request failed" in rec.message]
+    assert len(error_lines) == 1
+    assert error_lines[0].exc_info is not None
+
+
+def test_predict_stream_logs_start_and_done_with_request_id(client, caplog):
+    """A successful /predict/stream call must log a start and done line sharing one request_id."""
+
+    class _FakeChunk:
+        def __init__(self, text):
+            self.text = text
+
+    with (
+        patch("app.main.stream_generate", return_value=iter([_FakeChunk("positive")])),
+        caplog.at_level("INFO", logger="app.main"),
+    ):
+        client.post("/predict/stream", json={"question": "Classify: 'Revenue fell.'"})
+
+    start_lines = [r for r in caplog.records if "predict/stream request start" in r.message]
+    done_lines = [r for r in caplog.records if "predict/stream request done" in r.message]
+    assert len(start_lines) == 1
+    assert len(done_lines) == 1
+
+    import re
+    start_id = re.search(r"request_id=(\S+)", start_lines[0].message).group(1)
+    done_id = re.search(r"request_id=(\S+)", done_lines[0].message).group(1)
+    assert start_id == done_id
+
+
+def test_predict_stream_generation_failure_logs_error(client, caplog):
+    """A mid-stream generation failure must be logged, and the stream must still terminate with [DONE]."""
+    with (
+        patch("app.main.stream_generate", side_effect=RuntimeError("gpu error")),
+        caplog.at_level("ERROR", logger="app.main"),
+    ):
+        r = client.post("/predict/stream", json={"question": "Classify: 'Revenue fell.'"})
+
+    assert r.status_code == 200
+    assert "data: [DONE]" in r.text
+    error_lines = [rec for rec in caplog.records if "predict/stream request failed" in rec.message]
+    assert len(error_lines) == 1
+    assert error_lines[0].exc_info is not None

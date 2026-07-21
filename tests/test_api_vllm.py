@@ -212,3 +212,40 @@ def test_build_prompt_question_between_tags():
     start = prompt.index("[INST]") + len("[INST]")
     end = prompt.index("[/INST]")
     assert question in prompt[start:end]
+
+
+# ---------------------------------------------------------------------------
+# Per-request observability: request_id + latency logging
+# ---------------------------------------------------------------------------
+
+def test_predict_logs_start_and_done_with_request_id(client, caplog):
+    """A /predict call (even in MOCK_MODE) must log a start and done line sharing one request_id."""
+    with caplog.at_level("INFO", logger="app.main_vllm"):
+        client.post("/predict", json={"question": "Classify: 'Revenue rose 12%.'"})
+
+    start_lines = [r for r in caplog.records if "predict request start" in r.message]
+    done_lines = [r for r in caplog.records if "predict request done" in r.message]
+    assert len(start_lines) == 1
+    assert len(done_lines) == 1
+
+    import re
+    start_id = re.search(r"request_id=(\S+)", start_lines[0].message).group(1)
+    done_id = re.search(r"request_id=(\S+)", done_lines[0].message).group(1)
+    assert start_id == done_id
+    assert "latency_ms=" in done_lines[0].message
+
+
+def test_predict_stream_logs_start_and_done_with_request_id(client, caplog):
+    """A /predict/stream call (even in MOCK_MODE) must log a start and done line sharing one request_id."""
+    with caplog.at_level("INFO", logger="app.main_vllm"):
+        client.post("/predict/stream", json={"question": "Classify: 'Revenue fell.'"})
+
+    start_lines = [r for r in caplog.records if "predict/stream request start" in r.message]
+    done_lines = [r for r in caplog.records if "predict/stream request done" in r.message]
+    assert len(start_lines) == 1
+    assert len(done_lines) == 1
+
+    import re
+    start_id = re.search(r"request_id=(\S+)", start_lines[0].message).group(1)
+    done_id = re.search(r"request_id=(\S+)", done_lines[0].message).group(1)
+    assert start_id == done_id

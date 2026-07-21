@@ -12,6 +12,7 @@ MOCK_MODE=true skips engine init for CI / infra validation.
 import json
 import logging
 import os
+import time
 import uuid
 from contextlib import asynccontextmanager
 
@@ -103,8 +104,20 @@ async def predict(query: Query):
     if engine is None:
         logger.warning("Rejecting /predict: engine not loaded")
         raise HTTPException(status_code=503, detail="Engine not loaded")
+
+    request_id = str(uuid.uuid4())
+    start = time.perf_counter()
+    logger.info(
+        "predict request start request_id=%s adapter=%s max_tokens=%d",
+        request_id, query.adapter, query.max_tokens,
+    )
+
     if MOCK_MODE:
         answer = "Sentiment: positive. This statement reflects favorable financial conditions."
+        logger.info(
+            "predict request done request_id=%s latency_ms=%.1f",
+            request_id, (time.perf_counter() - start) * 1000,
+        )
         return Response(
             answer=answer,
             label=parse_sentiment_label(answer),
@@ -115,14 +128,21 @@ async def predict(query: Query):
     from vllm import SamplingParams
     params = SamplingParams(temperature=0.0, max_tokens=query.max_tokens)
     lora_request = _lora_request(query.adapter)
-    request_id = str(uuid.uuid4())
 
-    answer = ""
-    async for output in engine.generate(
-        _build_prompt(query.question), params, request_id, lora_request=lora_request
-    ):
-        answer = output.outputs[0].text
+    try:
+        answer = ""
+        async for output in engine.generate(
+            _build_prompt(query.question), params, request_id, lora_request=lora_request
+        ):
+            answer = output.outputs[0].text
+    except Exception:
+        logger.error("predict request failed request_id=%s", request_id, exc_info=True)
+        raise HTTPException(status_code=500, detail="Generation failed") from None
 
+    logger.info(
+        "predict request done request_id=%s latency_ms=%.1f",
+        request_id, (time.perf_counter() - start) * 1000,
+    )
     return Response(
         answer=answer,
         label=parse_sentiment_label(answer),
@@ -137,10 +157,21 @@ async def predict_stream(query: Query):
         logger.warning("Rejecting /predict/stream: engine not loaded")
         raise HTTPException(status_code=503, detail="Engine not loaded")
 
+    request_id = str(uuid.uuid4())
+    start = time.perf_counter()
+    logger.info(
+        "predict/stream request start request_id=%s adapter=%s max_tokens=%d",
+        request_id, query.adapter, query.max_tokens,
+    )
+
     if MOCK_MODE:
         async def mock_generator():
             for token in ["Sentiment", ":", " positive", ".", " Mock", " response", "."]:
                 yield f"data: {json.dumps({'token': token, 'model_version': MODEL_VERSION})}\n\n"
+            logger.info(
+                "predict/stream request done request_id=%s latency_ms=%.1f",
+                request_id, (time.perf_counter() - start) * 1000,
+            )
             yield "data: [DONE]\n\n"
 
         return StreamingResponse(mock_generator(), media_type="text/event-stream")
@@ -148,18 +179,24 @@ async def predict_stream(query: Query):
     from vllm import SamplingParams
     params = SamplingParams(temperature=0.0, max_tokens=query.max_tokens)
     lora_request = _lora_request(query.adapter)
-    request_id = str(uuid.uuid4())
 
     async def event_generator():
-        prev_len = 0
-        async for output in engine.generate(
-            _build_prompt(query.question), params, request_id, lora_request=lora_request
-        ):
-            new_text = output.outputs[0].text
-            token = new_text[prev_len:]
-            prev_len = len(new_text)
-            if token:
-                yield f"data: {json.dumps({'token': token, 'model_version': MODEL_VERSION})}\n\n"
+        try:
+            prev_len = 0
+            async for output in engine.generate(
+                _build_prompt(query.question), params, request_id, lora_request=lora_request
+            ):
+                new_text = output.outputs[0].text
+                token = new_text[prev_len:]
+                prev_len = len(new_text)
+                if token:
+                    yield f"data: {json.dumps({'token': token, 'model_version': MODEL_VERSION})}\n\n"
+            logger.info(
+                "predict/stream request done request_id=%s latency_ms=%.1f",
+                request_id, (time.perf_counter() - start) * 1000,
+            )
+        except Exception:
+            logger.error("predict/stream request failed request_id=%s", request_id, exc_info=True)
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

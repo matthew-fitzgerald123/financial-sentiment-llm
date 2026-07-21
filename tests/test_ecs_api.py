@@ -33,7 +33,7 @@ def client():
     the done Event so the SSE generator reaches its [DONE] sentinel.
     """
 
-    def _fake_stream(question, max_tokens, use_adapter, q, done):
+    def _fake_stream(question, max_tokens, use_adapter, q, done, request_id):
         done.set()
 
     with (
@@ -130,7 +130,7 @@ def test_predict_rejects_blank_question(client):
 def test_predict_stream_done_event(client):
     """Streaming endpoint must always emit the SSE [DONE] sentinel."""
 
-    def _fake_stream(question, max_tokens, use_adapter, q, done):
+    def _fake_stream(question, max_tokens, use_adapter, q, done, request_id):
         done.set()
 
     with patch("app.main_ecs._stream_into_queue", side_effect=_fake_stream):
@@ -147,7 +147,7 @@ def test_predict_stream_done_event(client):
 def test_predict_stream_token_format(client):
     """Tokens emitted before [DONE] must be valid JSON with 'token' and 'model_version'."""
 
-    def _emit_one_token(question, max_tokens, use_adapter, q, done):
+    def _emit_one_token(question, max_tokens, use_adapter, q, done, request_id):
         q.put("positive")
         done.set()
 
@@ -217,6 +217,41 @@ def test_predict_stream_missing_question(client):
 
 
 # ---------------------------------------------------------------------------
+# Per-request observability: request_id + latency logging, error handling
+# ---------------------------------------------------------------------------
+
+def test_predict_logs_start_and_done_with_request_id(client, caplog):
+    """A successful /predict call must log a start and done line sharing one request_id."""
+    with caplog.at_level("INFO", logger="app.main_ecs"):
+        client.post("/predict", json={"question": "Classify: 'Revenue rose 12%.'"})
+
+    start_lines = [r for r in caplog.records if "predict request start" in r.message]
+    done_lines = [r for r in caplog.records if "predict request done" in r.message]
+    assert len(start_lines) == 1
+    assert len(done_lines) == 1
+
+    import re
+    start_id = re.search(r"request_id=(\S+)", start_lines[0].message).group(1)
+    done_id = re.search(r"request_id=(\S+)", done_lines[0].message).group(1)
+    assert start_id == done_id
+    assert "latency_ms=" in done_lines[0].message
+
+
+def test_predict_generation_failure_returns_500_and_logs_error(client, caplog):
+    """A generation exception must be logged with the request_id and surfaced as a 500."""
+    with (
+        patch("app.main_ecs._generate", side_effect=RuntimeError("out of memory")),
+        caplog.at_level("ERROR", logger="app.main_ecs"),
+    ):
+        r = client.post("/predict", json={"question": "Classify: 'Revenue rose 12%.'"})
+
+    assert r.status_code == 500
+    error_lines = [rec for rec in caplog.records if "predict request failed" in rec.message]
+    assert len(error_lines) == 1
+    assert error_lines[0].exc_info is not None
+
+
+# ---------------------------------------------------------------------------
 # MOCK_MODE inference helpers — exercised without patching _generate or
 # _stream_into_queue so the guards added for MOCK_MODE are directly tested.
 # ---------------------------------------------------------------------------
@@ -244,11 +279,35 @@ def test_stream_into_queue_sets_done_in_mock_mode():
 
     q = Queue()
     done = Event()
-    t = threading.Thread(target=_stream_into_queue, args=("Classify.", 64, True, q, done))
+    t = threading.Thread(target=_stream_into_queue, args=("Classify.", 64, True, q, done, "test-request-id"))
     t.start()
     t.join(timeout=2.0)
 
     assert done.is_set(), "_stream_into_queue did not set done in MOCK_MODE"
+
+
+def test_stream_into_queue_logs_start_and_done(caplog):
+    """_stream_into_queue must log a start and done line carrying the passed-in request_id."""
+    import threading
+    from queue import Queue
+    from threading import Event
+    from app.main_ecs import _stream_into_queue
+
+    q = Queue()
+    done = Event()
+    with caplog.at_level("INFO", logger="app.main_ecs"):
+        t = threading.Thread(
+            target=_stream_into_queue, args=("Classify.", 64, True, q, done, "my-request-id")
+        )
+        t.start()
+        t.join(timeout=2.0)
+
+    start_lines = [r for r in caplog.records if "predict/stream request start" in r.message]
+    done_lines = [r for r in caplog.records if "predict/stream request done" in r.message]
+    assert len(start_lines) == 1
+    assert len(done_lines) == 1
+    assert "request_id=my-request-id" in start_lines[0].message
+    assert "request_id=my-request-id" in done_lines[0].message
 
 
 def test_stream_into_queue_emits_tokens_in_mock_mode():
@@ -260,7 +319,7 @@ def test_stream_into_queue_emits_tokens_in_mock_mode():
 
     q = Queue()
     done = Event()
-    t = threading.Thread(target=_stream_into_queue, args=("Classify.", 64, True, q, done))
+    t = threading.Thread(target=_stream_into_queue, args=("Classify.", 64, True, q, done, "test-request-id"))
     t.start()
     t.join(timeout=2.0)
 
