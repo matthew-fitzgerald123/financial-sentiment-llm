@@ -1,4 +1,4 @@
-.PHONY: install prepare train eval eval-ood mlflow serve serve-merged serve-ecs serve-vllm merge benchmark benchmark-ood test terraform-validate
+.PHONY: install prepare train eval eval-ood mlflow serve serve-merged serve-ecs serve-gguf serve-vllm merge benchmark benchmark-ood test terraform-validate
 
 install:
 	pip install -r requirements.txt
@@ -30,6 +30,10 @@ serve-merged:
 # ECS-compatible — transformers + PEFT backend
 serve-ecs:
 	MOCK_MODE=true uvicorn app.main_ecs:app --host 127.0.0.1 --port 8080 --reload
+
+# CPU-only serving — llama.cpp backend on the merged 4-bit GGUF (Cloud Run image path)
+serve-gguf:
+	uvicorn app.main_gguf:app --host 127.0.0.1 --port 8080 --reload
 
 # GPU serving — vLLM backend (requires CUDA; use MOCK_MODE=true for local smoke-test)
 serve-vllm:

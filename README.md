@@ -46,6 +46,11 @@ flowchart TD
         ADPT --> LC[Local: app/main.py\nmlx-lm + SSE]
         ADPT --> DC[Docker: app/main_ecs.py\ntransformers + PEFT]
         ADPT --> VL[ECS GPU: app/main_vllm.py\nvLLM AsyncEngine + LoRA]
+        ADPT --> GG[CPU demo: app/main_gguf.py\nllama.cpp + merged 4-bit GGUF]
+    end
+
+    subgraph GCP["GCP (demo)"]
+        GG --> CR[Cloud Run\n8 vCPU / 16 GiB, scale-to-zero]
     end
 
     subgraph AWS["AWS (Terraform)"]
@@ -131,6 +136,9 @@ make serve-ecs
 # Serve with vLLM GPU backend (requires CUDA; use MOCK_MODE=true without a GPU)
 MOCK_MODE=true make serve-vllm
 
+# Serve the CPU-only llama.cpp backend (requires GGUF exports in ./models, see Deploy)
+make serve-gguf
+
 # Serve the ECS-compatible backend in Docker (requires a trained adapter)
 docker compose up --build
 
@@ -197,6 +205,38 @@ data: {"token": ":", "model_version": "mistral-7b-finance-mlx-lora-v1"}
 data: {"token": " negative", "model_version": "mistral-7b-finance-mlx-lora-v1"}
 ...
 data: [DONE]
+```
+
+## Live Demo (Cloud Run)
+
+A public, scale-to-zero demo of the web UI runs on GCP Cloud Run: the LoRA
+adapter is merged into the base weights, quantized to 4-bit GGUF
+(`Q4_K_M`, ~4.1 GB), and served by `app/main_gguf.py` via
+[llama-cpp-python](https://github.com/abetlen/llama-cpp-python) — no GPU
+required. Duel mode lazy-loads a base-model GGUF
+([bartowski/Mistral-7B-Instruct-v0.3-GGUF](https://huggingface.co/bartowski/Mistral-7B-Instruct-v0.3-GGUF))
+for the side-by-side comparison, exactly like the mlx entrypoint does.
+
+Reproduce the model export and image:
+
+```bash
+# 1. Merge the adapter and dequantize to fp16 (HF format)
+python -m mlx_lm fuse --model mlx-community/Mistral-7B-Instruct-v0.3-4bit \
+    --adapter-path ./mistral-finetuned --save-path ./merged-fp16 --dequantize
+
+# 2. Convert + quantize with llama.cpp
+python llama.cpp/convert_hf_to_gguf.py ./merged-fp16 --outtype f16 --outfile mistral-7b-finance-f16.gguf
+llama-quantize mistral-7b-finance-f16.gguf models/mistral-7b-finance-Q4_K_M.gguf Q4_K_M
+
+# 3. Base model GGUF for Duel mode
+huggingface-cli download bartowski/Mistral-7B-Instruct-v0.3-GGUF \
+    Mistral-7B-Instruct-v0.3-Q4_K_M.gguf --local-dir ./models
+
+# 4. Build and deploy (first cold start loads 4 GB of weights, ~30 s)
+docker buildx build --platform linux/amd64 -f Dockerfile.cloudrun -t $IMAGE . && docker push $IMAGE
+gcloud run deploy financial-sentiment --image $IMAGE --region us-central1 \
+    --allow-unauthenticated --memory 16Gi --cpu 8 --concurrency 4 \
+    --max-instances 1 --timeout 300 --cpu-boost
 ```
 
 ## Eval Details

@@ -33,7 +33,7 @@
     --mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
     --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
   }
-  /* The page always follows the OS theme live — no stored override. */
+  /* The page always follows the OS theme live; no stored override. */
   @media (prefers-color-scheme: light) {
     :root {
       --bg: #f6f7fa;
@@ -87,7 +87,7 @@
     pointer-events: none;
     z-index: 0;
   }
-  /* pre-faded radial gradients, not filter:blur — cheap to composite */
+  /* pre-faded radial gradients, not filter:blur, cheap to composite */
   .orb {
     position: fixed;
     pointer-events: none;
@@ -714,7 +714,7 @@
       </div>
     </div>
     <div class="duel-note">
-      The base 7B often reads the tone right — in prose no pipeline can consume.
+      The base 7B often reads the tone right, but answers in prose no pipeline can consume.
       The 40&nbsp;MB adapter locks the same model to a schema: parseable every time,
       measurable (0.95 label accuracy), eval-gated in CI, ~5× fewer tokens per call.
     </div>
@@ -917,8 +917,8 @@
   const RUN_LABELS = { classify: "Analyze", duel: "Run duel", tape: "Read tape" };
   const PLACEHOLDERS = {
     classify: "e.g. Operating profit rose to EUR 13.1 mn from EUR 8.7 mn in the corresponding period in 2007…",
-    duel: "One statement — same prompt goes to the fine-tune and the raw base model…",
-    tape: "Several headlines, one per line — get an aggregate market mood…",
+    duel: "One statement: same prompt goes to the fine-tune and the raw base model…",
+    tape: "Several headlines, one per line, get an aggregate market mood…",
   };
   function hideResults() {
     els.result.classList.remove("visible");
@@ -950,7 +950,7 @@
     if (!resp.ok) {
       let detail = resp.statusText;
       try { detail = (await resp.json()).detail ?? detail; } catch {}
-      throw new Error(`${resp.status} — ${typeof detail === "string" ? detail : JSON.stringify(detail)}`);
+      throw new Error(`${resp.status}: ${typeof detail === "string" ? detail : JSON.stringify(detail)}`);
     }
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
@@ -1075,7 +1075,7 @@
             s.ui.stats.innerHTML = `<span>ttft <b>${ttft} ms</b></span><span><b>${tokens}</b> tok</span>`;
           },
         });
-        if (!locked) setDuelVerdict(s.ui.verdict, "unknown", "unparseable — prose, not schema");
+        if (!locked) setDuelVerdict(s.ui.verdict, "unknown", "unparseable: prose, not schema");
         s.ui.stats.innerHTML =
           `<span>ttft <b>${r.ttft ?? "–"} ms</b></span>` +
           `<span>total <b>${(r.total / 1000).toFixed(2)} s</b></span>` +
