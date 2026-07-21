@@ -387,3 +387,60 @@ def test_health_503_when_model_none(monkeypatch):
     data = r.json()
     assert data["status"] == "unhealthy"
     assert data["model_loaded"] is False
+
+
+# ---------------------------------------------------------------------------
+# Generation timeout
+# ---------------------------------------------------------------------------
+
+def test_predict_timeout_returns_504(monkeypatch):
+    """A generation call that exceeds GENERATION_TIMEOUT_SECONDS must return 504."""
+    import time as _time
+
+    def _slow_generate(*args, **kwargs):
+        _time.sleep(0.2)
+        return "Sentiment: positive. Favorable conditions."
+
+    with (
+        patch("app.main.load", return_value=(MagicMock(), MagicMock())),
+        patch("app.main.mlx_generate", side_effect=_slow_generate),
+        patch("app.main.stream_generate", return_value=iter([])),
+    ):
+        from app.main import app
+        import app.main as m
+        monkeypatch.setattr(m, "GENERATION_TIMEOUT_SECONDS", 0.05)
+        with TestClient(app) as c:
+            r = c.post("/predict", json={"question": "Classify: 'Revenue rose.'"})
+
+    assert r.status_code == 504
+    assert "timed out" in r.json()["detail"].lower()
+
+
+def test_predict_stream_timeout_emits_error_event(monkeypatch):
+    """A streaming call that stalls past GENERATION_TIMEOUT_SECONDS must emit an SSE error."""
+    import time as _time
+
+    class _Chunk:
+        def __init__(self, text):
+            self.text = text
+
+    def _slow_stream(*args, **kwargs):
+        yield _Chunk("Sentiment")
+        _time.sleep(0.2)
+        yield _Chunk(": positive")
+
+    with (
+        patch("app.main.load", return_value=(MagicMock(), MagicMock())),
+        patch("app.main.mlx_generate", return_value="Sentiment: positive."),
+        patch("app.main.stream_generate", side_effect=_slow_stream),
+    ):
+        from app.main import app
+        import app.main as m
+        monkeypatch.setattr(m, "GENERATION_TIMEOUT_SECONDS", 0.05)
+        with TestClient(app) as c:
+            r = c.post("/predict/stream", json={"question": "Classify: 'Revenue fell.'"})
+
+    assert r.status_code == 200
+    assert '"error"' in r.text
+    assert "timed out" in r.text.lower()
+    assert "data: [DONE]" in r.text
