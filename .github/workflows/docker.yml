@@ -55,6 +55,19 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"question": "Classify the sentiment: \"Operating margins expanded by 300 basis points.\""}'
 
+      - name: Wait for container-native HEALTHCHECK to report healthy
+        run: |
+          for i in $(seq 1 30); do
+            health="$(docker inspect --format='{{.State.Health.Status}}' api)"
+            if [ "$health" = "healthy" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Docker HEALTHCHECK did not report healthy in time"
+          docker inspect --format='{{json .State.Health}}' api
+          exit 1
+
       - name: Print container logs
         if: always()
         run: docker logs api

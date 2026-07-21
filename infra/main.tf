@@ -284,6 +284,15 @@ resource "aws_ecs_task_definition" "api" {
     resourceRequirements = [
       { type = "GPU", value = tostring(var.gpu_count) }
     ]
+    # Independent of the ALB health check: lets ECS itself detect and
+    # replace a container stuck in a bad state (e.g. hung event loop).
+    healthCheck = {
+      command     = ["CMD-SHELL", "python3 -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8080/health', timeout=5).status == 200 else 1)\" || exit 1"]
+      interval    = 30
+      timeout     = 10
+      retries     = 3
+      startPeriod = 90
+    }
     logConfiguration = {
       logDriver = "awslogs"
       options = {
