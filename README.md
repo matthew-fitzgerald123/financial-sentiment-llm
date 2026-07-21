@@ -70,7 +70,7 @@ flowchart TD
 - **Serving**: FastAPI + uvicorn
 - **Infra**: Docker (build + smoke-test gated in CI) · AWS ECS EC2 (g4dn.xlarge, NVIDIA T4) · Terraform (fmt + validate gated in CI) · GitHub Actions
 - **Alerting**: CloudWatch alarms on ALB unhealthy hosts, ALB 5xx rate, ECS CPU/memory utilization, and application-level ERROR log lines (via a CloudWatch Logs metric filter on the app's structured logs, e.g. model load failures), all published to an SNS topic (subscribe via the `alarm_email` Terraform variable)
-- **Logging**: all three serving entrypoints emit structured logs (timestamp, level, logger, message) via the standard `logging` module; set `LOG_LEVEL` (default `INFO`) to control verbosity
+- **Logging**: all three serving entrypoints emit structured logs (timestamp, level, logger, message) via the standard `logging` module; set `LOG_LEVEL` (default `INFO`) to control verbosity. Every `/predict` and `/predict/stream` call is logged with a per-request UUID, start/done lines, and latency in milliseconds; generation failures are logged at `ERROR` with the request ID and full traceback, feeding the CloudWatch ERROR-log alarm (see Alerting) instead of failing silently
 
 ## Model Card
 

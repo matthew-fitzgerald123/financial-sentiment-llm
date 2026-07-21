@@ -7,6 +7,8 @@ import asyncio
 import json
 import logging
 import os
+import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager, nullcontext
 from pathlib import Path
@@ -124,33 +126,47 @@ def _generate(question: str, max_tokens: int, use_adapter: bool = True) -> str:
     return decoded.split("[/INST]")[-1].strip()
 
 
-def _stream_into_queue(question: str, max_tokens: int, use_adapter: bool, q: Queue, done: Event):
-    if MOCK_MODE:
-        source = _MOCK_RESPONSE if use_adapter else _MOCK_BASE_RESPONSE
-        for token in source.split():
-            q.put(token + " ")
-        done.set()
-        return
-    from transformers import TextIteratorStreamer
-    import threading
-    model = pipeline["model"]
-    tokenizer = pipeline["tokenizer"]
-    prompt = f"<s>[INST] {question} [/INST]"
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-    gen_kwargs = dict(**inputs, max_new_tokens=max_tokens, streamer=streamer, do_sample=False)
-
-    def _run():
-        with _adapter_context(model, use_adapter):
-            model.generate(**gen_kwargs)
-
-    t = threading.Thread(target=_run, daemon=True)
-    t.start()
+def _stream_into_queue(
+    question: str, max_tokens: int, use_adapter: bool, q: Queue, done: Event, request_id: str
+):
+    start = time.perf_counter()
+    logger.info(
+        "predict/stream request start request_id=%s adapter=%s max_tokens=%d",
+        request_id, use_adapter, max_tokens,
+    )
     try:
-        for token in streamer:
-            q.put(token)
+        if MOCK_MODE:
+            source = _MOCK_RESPONSE if use_adapter else _MOCK_BASE_RESPONSE
+            for token in source.split():
+                q.put(token + " ")
+        else:
+            from transformers import TextIteratorStreamer
+            import threading
+            model = pipeline["model"]
+            tokenizer = pipeline["tokenizer"]
+            prompt = f"<s>[INST] {question} [/INST]"
+            inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+            streamer = TextIteratorStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
+            gen_kwargs = dict(**inputs, max_new_tokens=max_tokens, streamer=streamer, do_sample=False)
+
+            def _run():
+                with _adapter_context(model, use_adapter):
+                    model.generate(**gen_kwargs)
+
+            t = threading.Thread(target=_run, daemon=True)
+            t.start()
+            try:
+                for token in streamer:
+                    q.put(token)
+            finally:
+                t.join()
+        logger.info(
+            "predict/stream request done request_id=%s latency_ms=%.1f",
+            request_id, (time.perf_counter() - start) * 1000,
+        )
+    except Exception:
+        logger.error("predict/stream request failed request_id=%s", request_id, exc_info=True)
     finally:
-        t.join()
         done.set()
 
 
@@ -159,9 +175,23 @@ async def predict(query: Query):
     if pipeline is None:
         logger.warning("Rejecting /predict: model not loaded")
         raise HTTPException(status_code=503, detail="Model not loaded")
+    request_id = str(uuid.uuid4())
+    start = time.perf_counter()
+    logger.info(
+        "predict request start request_id=%s adapter=%s max_tokens=%d",
+        request_id, query.adapter, query.max_tokens,
+    )
     loop = asyncio.get_event_loop()
-    answer = await loop.run_in_executor(
-        executor, _generate, query.question, query.max_tokens, query.adapter
+    try:
+        answer = await loop.run_in_executor(
+            executor, _generate, query.question, query.max_tokens, query.adapter
+        )
+    except Exception:
+        logger.error("predict request failed request_id=%s", request_id, exc_info=True)
+        raise HTTPException(status_code=500, detail="Generation failed") from None
+    logger.info(
+        "predict request done request_id=%s latency_ms=%.1f",
+        request_id, (time.perf_counter() - start) * 1000,
     )
     return Response(
         answer=answer,
@@ -176,9 +206,12 @@ async def predict_stream(query: Query):
     if pipeline is None:
         logger.warning("Rejecting /predict/stream: model not loaded")
         raise HTTPException(status_code=503, detail="Model not loaded")
+    request_id = str(uuid.uuid4())
     q: Queue = Queue()
     done = Event()
-    executor.submit(_stream_into_queue, query.question, query.max_tokens, query.adapter, q, done)
+    executor.submit(
+        _stream_into_queue, query.question, query.max_tokens, query.adapter, q, done, request_id
+    )
 
     async def event_generator():
         loop = asyncio.get_event_loop()
