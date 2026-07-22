@@ -20,7 +20,9 @@ class _FakeLLM:
 
 
 @pytest.fixture()
-def client():
+def client(monkeypatch):
+    import app.main_gguf as m
+    monkeypatch.setattr(m, "MOCK_MODE", False)
     with (
         patch("app.main_gguf.Path", MagicMock()),
         patch("app.main_gguf._load", return_value=_FakeLLM()),
@@ -215,8 +217,10 @@ def test_predict_503_logs_warning(client, monkeypatch, caplog):
     assert "model not loaded" in caplog.text.lower()
 
 
-def test_lifespan_logs_and_reraises_on_load_failure(caplog):
+def test_lifespan_logs_and_reraises_on_load_failure(caplog, monkeypatch):
     """A model-load failure at startup must be logged with context, not swallowed."""
+    import app.main_gguf as m
+    monkeypatch.setattr(m, "MOCK_MODE", False)
     with (
         patch("app.main_gguf.Path", MagicMock()),
         patch("app.main_gguf._load", side_effect=RuntimeError("weights corrupted")),
@@ -254,12 +258,13 @@ def test_predict_timeout_returns_504(monkeypatch):
             _time.sleep(0.2)
             return {"choices": [{"text": _MOCK_ANSWER}]}
 
+    import app.main_gguf as m
+    monkeypatch.setattr(m, "MOCK_MODE", False)
     with (
         patch("app.main_gguf.Path", MagicMock()),
         patch("app.main_gguf._load", return_value=_SlowLLM()),
     ):
         from app.main_gguf import app
-        import app.main_gguf as m
         monkeypatch.setattr(m, "GENERATION_TIMEOUT_SECONDS", 0.05)
         with TestClient(app) as c:
             r = c.post("/predict", json={"question": "Classify: 'Revenue rose.'"})
@@ -284,12 +289,13 @@ def test_predict_stream_timeout_emits_error_event(monkeypatch):
 
             return _gen()
 
+    import app.main_gguf as m
+    monkeypatch.setattr(m, "MOCK_MODE", False)
     with (
         patch("app.main_gguf.Path", MagicMock()),
         patch("app.main_gguf._load", return_value=_SlowStreamLLM()),
     ):
         from app.main_gguf import app
-        import app.main_gguf as m
         monkeypatch.setattr(m, "GENERATION_TIMEOUT_SECONDS", 0.05)
         with TestClient(app) as c:
             r = c.post("/predict/stream", json={"question": "Classify: 'Revenue fell.'"})

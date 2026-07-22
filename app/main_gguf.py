@@ -4,6 +4,8 @@ Runs the LoRA fine-tune merged into the base weights and quantized to 4-bit
 GGUF via llama.cpp (llama-cpp-python); no GPU or Apple Silicon required.
 Same API and web UI as the other entrypoints.
 Local Apple Silicon dev uses app/main.py (mlx-lm backend).
+
+MOCK_MODE=true skips loading the GGUF weights for CI / infra validation.
 """
 import asyncio
 import json
@@ -30,6 +32,7 @@ logger = logging.getLogger(__name__)
 FINETUNED_GGUF = os.getenv("FINETUNED_GGUF", "./models/mistral-7b-finance-Q4_K_M.gguf")
 BASE_GGUF = os.getenv("BASE_GGUF", "./models/Mistral-7B-Instruct-v0.3-Q4_K_M.gguf")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "mistral-7b-finance-mlx-lora-v1")
+MOCK_MODE = os.getenv("MOCK_MODE", "false").lower() == "true"
 GENERATION_TIMEOUT_SECONDS = float(os.getenv("GENERATION_TIMEOUT_SECONDS", "120"))
 N_CTX = int(os.getenv("N_CTX", "2048"))
 # 0 = let llama.cpp pick (all physical cores)
@@ -38,6 +41,18 @@ N_THREADS = int(os.getenv("N_THREADS", "0")) or None
 model = None
 base_model = None
 executor = ThreadPoolExecutor(max_workers=1)
+
+
+class _MockLLM:
+    """Stands in for llama_cpp.Llama in MOCK_MODE so no GGUF weights are required."""
+
+    _ANSWER = "Sentiment: positive. This statement reflects favorable financial conditions."
+    _TOKENS = ["Sentiment", ":", " positive", ".", " Mock", " response", "."]
+
+    def __call__(self, prompt, max_tokens=256, temperature=0.0, stream=False):
+        if stream:
+            return iter({"choices": [{"text": tok}]} for tok in self._TOKENS)
+        return {"choices": [{"text": self._ANSWER}]}
 
 
 def _load(gguf_path: str):
@@ -51,6 +66,8 @@ def _get_base():
 
     Only runs inside the single-worker executor, so no lock is needed."""
     global base_model
+    if MOCK_MODE:
+        return model
     if base_model is None:
         logger.info("Lazy-loading base GGUF %r for adapter=false requests", BASE_GGUF)
         base_model = _load(BASE_GGUF)
@@ -60,6 +77,12 @@ def _get_base():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global model
+    if MOCK_MODE:
+        model = _MockLLM()
+        logger.info("MOCK_MODE enabled, skipping GGUF load")
+        yield
+        return
+
     try:
         if not Path(FINETUNED_GGUF).exists():
             raise FileNotFoundError(f"No fine-tuned GGUF at {FINETUNED_GGUF!r}")
