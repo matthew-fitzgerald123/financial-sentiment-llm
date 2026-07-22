@@ -341,6 +341,43 @@ def test_lifespan_logs_and_reraises_on_engine_init_failure(monkeypatch, caplog):
 
 
 # ---------------------------------------------------------------------------
+# Generation failure (non-timeout exception)
+# ---------------------------------------------------------------------------
+
+def test_predict_real_path_generation_failure_returns_500_and_logs_error(monkeypatch, caplog):
+    """A generation exception must be logged with the request_id and surfaced as a 500, not crash unhandled."""
+    monkeypatch.setattr("app.main_vllm.MOCK_MODE", False)
+    mock_engine = MagicMock()
+    mock_engine.generate.side_effect = RuntimeError("out of memory")
+    monkeypatch.setattr("app.main_vllm.engine", mock_engine)
+    c = TestClient(app, raise_server_exceptions=True)
+    with caplog.at_level("ERROR", logger="app.main_vllm"):
+        r = c.post("/predict", json={"question": "Classify: 'Revenue rose 12%.'"})
+
+    assert r.status_code == 500
+    error_lines = [rec for rec in caplog.records if "predict request failed" in rec.message]
+    assert len(error_lines) == 1
+    assert error_lines[0].exc_info is not None
+
+
+def test_predict_stream_real_path_generation_failure_logs_error(monkeypatch, caplog):
+    """A mid-stream generation failure must be logged, and the stream must still terminate with [DONE]."""
+    monkeypatch.setattr("app.main_vllm.MOCK_MODE", False)
+    mock_engine = MagicMock()
+    mock_engine.generate.side_effect = RuntimeError("gpu error")
+    monkeypatch.setattr("app.main_vllm.engine", mock_engine)
+    c = TestClient(app)
+    with caplog.at_level("ERROR", logger="app.main_vllm"):
+        r = c.post("/predict/stream", json={"question": "Classify: 'Revenue fell.'"})
+
+    assert r.status_code == 200
+    assert "data: [DONE]" in r.text
+    error_lines = [rec for rec in caplog.records if "predict/stream request failed" in rec.message]
+    assert len(error_lines) == 1
+    assert error_lines[0].exc_info is not None
+
+
+# ---------------------------------------------------------------------------
 # Generation timeout
 # ---------------------------------------------------------------------------
 
