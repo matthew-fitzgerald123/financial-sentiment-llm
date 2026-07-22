@@ -237,3 +237,64 @@ def test_predict_with_adapter_false_uses_base_model(client):
     )
     assert r.status_code == 200
     assert r.json()["label"] == "positive"
+
+
+# ---------------------------------------------------------------------------
+# Generation timeout
+# ---------------------------------------------------------------------------
+
+def test_predict_timeout_returns_504(monkeypatch):
+    """A generation call that exceeds GENERATION_TIMEOUT_SECONDS must return 504."""
+    import time as _time
+
+    class _SlowLLM:
+        def __call__(self, prompt, max_tokens=256, temperature=0.0, stream=False):
+            if stream:
+                return iter([{"choices": [{"text": " positive"}]}])
+            _time.sleep(0.2)
+            return {"choices": [{"text": _MOCK_ANSWER}]}
+
+    with (
+        patch("app.main_gguf.Path", MagicMock()),
+        patch("app.main_gguf._load", return_value=_SlowLLM()),
+    ):
+        from app.main_gguf import app
+        import app.main_gguf as m
+        monkeypatch.setattr(m, "GENERATION_TIMEOUT_SECONDS", 0.05)
+        with TestClient(app) as c:
+            r = c.post("/predict", json={"question": "Classify: 'Revenue rose.'"})
+
+    assert r.status_code == 504
+    assert "timed out" in r.json()["detail"].lower()
+
+
+def test_predict_stream_timeout_emits_error_event(monkeypatch):
+    """A streaming call that stalls past GENERATION_TIMEOUT_SECONDS must emit an SSE error."""
+    import time as _time
+
+    class _SlowStreamLLM:
+        def __call__(self, prompt, max_tokens=256, temperature=0.0, stream=False):
+            if not stream:
+                return {"choices": [{"text": _MOCK_ANSWER}]}
+
+            def _gen():
+                yield {"choices": [{"text": "Sentiment"}]}
+                _time.sleep(0.2)
+                yield {"choices": [{"text": ": positive"}]}
+
+            return _gen()
+
+    with (
+        patch("app.main_gguf.Path", MagicMock()),
+        patch("app.main_gguf._load", return_value=_SlowStreamLLM()),
+    ):
+        from app.main_gguf import app
+        import app.main_gguf as m
+        monkeypatch.setattr(m, "GENERATION_TIMEOUT_SECONDS", 0.05)
+        with TestClient(app) as c:
+            r = c.post("/predict/stream", json={"question": "Classify: 'Revenue fell.'"})
+
+    assert r.status_code == 200
+    assert '"error"' in r.text
+    assert "timed out" in r.text.lower()
+    assert "data: [DONE]" in r.text
