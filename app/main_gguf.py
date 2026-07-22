@@ -18,7 +18,7 @@ from queue import Empty, Queue
 from threading import Event
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.ui import mount_ui
@@ -202,6 +202,4 @@ async def model_info():
 
 @app.get("/health")
 async def health():
-    loaded = model is not None
-    body = {"status": "ok" if loaded else "unhealthy", "model_loaded": loaded, "model_version": MODEL_VERSION}
-    return JSONResponse(content=body, status_code=200 if loaded else 503)
+    return {"status": "ok", "model_loaded": model is not None, "model_version": MODEL_VERSION}
