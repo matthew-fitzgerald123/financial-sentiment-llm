@@ -77,6 +77,28 @@ def test_predict_empty_question(client):
     assert r.status_code == 422
 
 
+def test_predict_rejects_blank_question(client):
+    """whitespace-only question must be rejected with 422."""
+    r = client.post("/predict", json={"question": "   "})
+    assert r.status_code == 422
+
+
+def test_predict_rejects_oversized_question(client):
+    """question longer than the allowed cap must be rejected with 422."""
+    r = client.post("/predict", json={"question": "x" * 4097})
+    assert r.status_code == 422
+
+
+@pytest.mark.parametrize("max_tokens", [0, -1, 2049])
+def test_predict_rejects_out_of_range_max_tokens(client, max_tokens):
+    """max_tokens must be a positive integer within the allowed cap."""
+    r = client.post(
+        "/predict",
+        json={"question": "Classify: 'Revenue rose 12%.'", "max_tokens": max_tokens},
+    )
+    assert r.status_code == 422
+
+
 def test_predict_stream_done_event(client):
     r = client.post(
         "/predict/stream",
@@ -151,3 +173,56 @@ def test_predict_stream_generation_failure_logs_error(client, caplog):
     error_lines = [rec for rec in caplog.records if "predict/stream request failed" in rec.message]
     assert len(error_lines) == 1
     assert error_lines[0].exc_info is not None
+
+
+# ---------------------------------------------------------------------------
+# 503 guard, lifespan load failure, adapter=false routing
+# ---------------------------------------------------------------------------
+
+def test_predict_503_when_model_none(client, monkeypatch):
+    """/predict must return 503 if the model was never loaded."""
+    import app.main_gguf as m
+    monkeypatch.setattr(m, "model", None)
+    r = client.post("/predict", json={"question": "Classify this."})
+    assert r.status_code == 503
+
+
+def test_predict_stream_503_when_model_none(client, monkeypatch):
+    """/predict/stream must return 503 if the model was never loaded."""
+    import app.main_gguf as m
+    monkeypatch.setattr(m, "model", None)
+    r = client.post("/predict/stream", json={"question": "Classify this."})
+    assert r.status_code == 503
+
+
+def test_predict_503_logs_warning(client, monkeypatch, caplog):
+    """A rejected /predict call should be observable in the logs, not silent."""
+    import app.main_gguf as m
+    monkeypatch.setattr(m, "model", None)
+    with caplog.at_level("WARNING", logger="app.main_gguf"):
+        client.post("/predict", json={"question": "Classify this."})
+    assert "model not loaded" in caplog.text.lower()
+
+
+def test_lifespan_logs_and_reraises_on_load_failure(caplog):
+    """A model-load failure at startup must be logged with context, not swallowed."""
+    with (
+        patch("app.main_gguf.Path", MagicMock()),
+        patch("app.main_gguf._load", side_effect=RuntimeError("weights corrupted")),
+    ):
+        from app.main_gguf import app as gguf_app
+        with caplog.at_level("ERROR", logger="app.main_gguf"):
+            with pytest.raises(RuntimeError, match="weights corrupted"):
+                with TestClient(gguf_app):
+                    pass
+    assert "failed to load model" in caplog.text.lower()
+
+
+def test_predict_with_adapter_false_uses_base_model(client):
+    """adapter=false must be accepted and served by the lazily loaded base model."""
+    r = client.post(
+        "/predict",
+        json={"question": "Classify the sentiment: 'Margins expanded.'", "adapter": False},
+    )
+    assert r.status_code == 200
+    assert r.json()["label"] == "positive"
