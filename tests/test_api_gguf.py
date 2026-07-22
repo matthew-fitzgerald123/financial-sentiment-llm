@@ -179,6 +179,17 @@ def test_predict_stream_generation_failure_logs_error(client, caplog):
 # 503 guard, lifespan load failure, adapter=false routing
 # ---------------------------------------------------------------------------
 
+def test_health_503_when_model_none(client, monkeypatch):
+    """/health must return 503 so Cloud Run's health check detects a failed model load."""
+    import app.main_gguf as m
+    monkeypatch.setattr(m, "model", None)
+    r = client.get("/health")
+    assert r.status_code == 503
+    data = r.json()
+    assert data["status"] == "unhealthy"
+    assert data["model_loaded"] is False
+
+
 def test_predict_503_when_model_none(client, monkeypatch):
     """/predict must return 503 if the model was never loaded."""
     import app.main_gguf as m
