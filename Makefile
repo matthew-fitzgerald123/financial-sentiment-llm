@@ -32,6 +32,7 @@ serve-ecs:
 	MOCK_MODE=true uvicorn app.main_ecs:app --host 127.0.0.1 --port 8080 --reload
 
 # CPU-only serving — llama.cpp backend on the merged 4-bit GGUF (Cloud Run image path)
+# requires GGUF exports in ./models; use MOCK_MODE=true for local smoke-test
 serve-gguf:
 	uvicorn app.main_gguf:app --host 127.0.0.1 --port 8080 --reload
 

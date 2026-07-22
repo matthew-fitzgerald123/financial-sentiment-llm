@@ -141,6 +141,9 @@ MOCK_MODE=true make serve-vllm
 # Serve the CPU-only llama.cpp backend (requires GGUF exports in ./models, see Deploy)
 make serve-gguf
 
+# Serve the CPU-only backend without real weights (CI / infra validation)
+MOCK_MODE=true make serve-gguf
+
 # Serve the ECS-compatible backend in Docker (requires a trained adapter)
 docker compose up --build
 
