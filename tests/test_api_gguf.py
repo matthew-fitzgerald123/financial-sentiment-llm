@@ -40,6 +40,17 @@ def test_health(client):
     assert "model_version" in data
 
 
+def test_health_503_when_model_none(client, monkeypatch):
+    """/health must return 503 so the Cloud Run health check detects a failed model load."""
+    import app.main_gguf as m
+    monkeypatch.setattr(m, "model", None)
+    r = client.get("/health")
+    assert r.status_code == 503
+    data = r.json()
+    assert data["status"] == "unhealthy"
+    assert data["model_loaded"] is False
+
+
 def test_model_info(client):
     r = client.get("/model/info")
     assert r.status_code == 200
